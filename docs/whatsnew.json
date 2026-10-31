@@ -1,13 +1,11 @@
 {
-  "version": "1.3.0",
+  "version": "1.3.1",
   "date": "2026-10-31",
-  "new": [
-    "Đồng bộ cài đặt giữa PC và điện thoại qua Gist riêng tư trên GitHub của bạn (nhóm, tên/mô tả, logo, app ẩn). Dán token 1 lần trên mỗi máy, chấm góc phải xanh là đã đồng bộ",
-    "Xuất / Nhập cài đặt ra file để sao lưu",
-    "Hướng dẫn tạo token ngay trong Cài đặt"
-  ],
+  "new": [],
   "improved": [
-    "Nút mây xoay khi đang tải danh sách, đỏ khi lỗi; chấm góc phải giờ dành cho trạng thái đồng bộ"
+    "Dò logo ở cả nhánh main lẫn master, và dò lại khi repo có thay đổi mới"
   ],
-  "fixed": []
+  "fixed": [
+    "Logo trong thư mục build của các repo dùng nhánh master (Mon Cam, M View…) không hiện"
+  ]
 }

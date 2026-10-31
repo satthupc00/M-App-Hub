@@ -28,6 +28,7 @@ const S = {
   overrides: store.get('overrides', {}),  // repo -> {name, desc}
   hidden: store.get('hidden', []),
   icons: store.get('icons', {}),        // repo -> url tìm được ('' = không có)
+  iconTried: store.get('iconTried', {}),// repo -> pushed_at lúc dò lần cuối (repo đổi thì dò lại)
   gistId: store.get('gistId', ''),      // gist chứa cài đặt đồng bộ
   localTs: store.get('localTs', 0),     // lần sửa cài đặt gần nhất trên máy này
   lastSync: store.get('lastSync', 0),
@@ -309,15 +310,17 @@ function shrinkImage(file, size) {
 }
 function loadImg(url) { return new Promise(res => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = url; }); }
 async function probeIcons(list) {
-  const todo = list.filter(r => S.icons[r.name] === undefined && !S.overrides[r.name]?.logo && !probing.has(r.name));
+  // Dò lại khi: chưa dò, hoặc trước đó không thấy mà repo đã có thay đổi mới
+  const todo = list.filter(r => !S.overrides[r.name]?.logo && !probing.has(r.name) && (S.icons[r.name] === undefined || (S.icons[r.name] === '' && S.iconTried[r.name] !== r.pushed)));
   await mapLimit(todo, 4, async r => {
     probing.add(r.name);
     let found = '';
-    for (const path of ICON_PATHS) {
-      const url = `${RAW}/${r.full}/${r.branch || 'main'}/${path}`;
-      if (await loadImg(url)) { found = url; break; }
+    const branches = [...new Set([r.branch || 'main', 'main', 'master'])];   // nhánh mặc định trước, rồi main/master
+    outer: for (const br of branches) for (const path of ICON_PATHS) {
+      const url = `${RAW}/${r.full}/${br}/${path}`;
+      if (await loadImg(url)) { found = url; break outer; }
     }
-    S.icons[r.name] = found; save('icons'); probing.delete(r.name);
+    S.icons[r.name] = found; S.iconTried[r.name] = r.pushed; save('icons'); save('iconTried'); probing.delete(r.name);
     if (found) $$(`.card[data-repo="${CSS.escape(r.name)}"] .chip`).forEach(c => { c.className = 'chip img'; c.style.background = ''; c.innerHTML = `<img src="${esc(found)}" alt="">`; });
   });
 }
@@ -462,7 +465,7 @@ function openSettings() {
         $('#sTokEye', b).onclick = () => { const i = $('#sTok', b); i.type = i.type === 'password' ? 'text' : 'password'; };
         $('#sCheck', b).onclick = () => checkUpdate(true);
         $('#sWhatsNew', b).onclick = openWhatsNew;
-        $('#sForce', b).onclick = () => { for (const k in S.icons) if (!S.icons[k]) delete S.icons[k]; save('icons'); closeDialog(); reload(true); };
+        $('#sForce', b).onclick = () => { for (const k in S.icons) if (!S.icons[k]) delete S.icons[k]; save('icons'); S.iconTried = {}; save('iconTried'); closeDialog(); reload(true); };
         $('#sReset', b).onclick = () => { if (!confirm('Xóa toàn bộ nhóm, tên/mô tả đã sửa và danh sách ẩn?')) return;
           S.groups = [{ id: 'g1', name: 'App lớn' }, { id: 'g2', name: 'App nhỏ' }]; S.assign = {}; S.order = {}; S.overrides = {}; S.hidden = []; S.sel = 'all';
           ['groups', 'assign', 'order', 'overrides', 'hidden', 'sel'].forEach(save); closeDialog(); render(); toast('Đã đặt lại nhóm & tùy chỉnh'); };
@@ -661,6 +664,7 @@ addEventListener('keydown', e => {
 });
 
 /* ---------- khởi động ---------- */
+if (store.get('iconsV', 0) < 2) { for (const k in S.icons) if (!S.icons[k]) delete S.icons[k]; save('icons'); store.set('iconsV', 2); }
 render();
 setSync(S.token ? (S.lastSync ? 'ok' : 'off') : 'off');
 if (!S.cache || Date.now() - S.cache.ts > CACHE_TTL) reload(false);
