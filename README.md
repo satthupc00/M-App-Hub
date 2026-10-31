@@ -10,6 +10,8 @@ Thư mục `docs/` là toàn bộ app (HTML + JS thuần, không framework). Ele
 ## Phát hành bản mới
 1. Tăng `version` trong `package.json` và cập nhật `docs/whatsnew.json` (cùng số version).
 2. `node scripts/sync-version.js`, commit.
-3. Tạo tag `vX.Y.Z` và push → GitHub Actions tự build installer Windows và đăng lên Releases; web tự deploy lên Pages.
+3. Chạy workflow **Release Windows** (Actions → Run workflow) hoặc push tag `vX.Y.Z` → GitHub Actions build installer Windows, đăng lên Releases kèm nội dung từ `whatsnew.json`; web tự deploy lên Pages khi `docs/` thay đổi.
+
+Lần đầu cần bật GitHub Pages: Settings → Pages → Source: **GitHub Actions**.
 
 Created by Mondiro

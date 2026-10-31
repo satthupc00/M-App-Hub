@@ -1,0 +1,16 @@
+name: Update release notes
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: ver
+        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - run: node scripts/release-notes.js release-notes.md
+      - run: gh release edit "v${{ steps.ver.outputs.v }}" --title "M AppHub v${{ steps.ver.outputs.v }}" --notes-file release-notes.md --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

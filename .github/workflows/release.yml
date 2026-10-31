@@ -24,9 +24,7 @@ jobs:
       - name: Release notes from whatsnew.json
         run: node scripts/release-notes.js release-notes.md
       - name: Update release body
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.ver.outputs.v }}
-          name: M AppHub v${{ steps.ver.outputs.v }}
-          target_commitish: ${{ github.sha }}
-          body_path: release-notes.md
+        shell: bash
+        run: gh release edit "v${{ steps.ver.outputs.v }}" --title "M AppHub v${{ steps.ver.outputs.v }}" --notes-file release-notes.md --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
