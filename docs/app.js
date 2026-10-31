@@ -26,7 +26,9 @@ const S = {
   hidden: store.get('hidden', []),
   token: store.get('token', ''),
   cache: store.get('cache', null),        // {ts, repos:[...]}
-  sel: store.get('sel', 'all'),           // 'all' | groupId | 'none' | 'hidden'
+  sel: store.get('sel', 'all'),           // nhóm đang chọn: 'all' | groupId | 'none' | 'hidden'
+  mode: store.get('mode', 'group'),       // 'group' | 'platform'
+  pf: store.get('pf', 'all'),             // nền tảng đang chọn: 'all' | 'both' | 'pc' | 'mobile' | 'none'
   q: ''
 };
 const save = k => store.set(k, S[k]);
@@ -148,21 +150,28 @@ function sortByOrder(list, key) {
 }
 
 /* ---------- render ---------- */
-const PF_ICON = { PC: 'i-monitor', Android: 'i-phone', Mac: 'i-monitor', Linux: 'i-monitor', Web: 'i-globe' };
-function rowHTML(r) {
-  const name = dispName(r), desc = dispDesc(r), rel = r.rel;
+const PF_SECTIONS = [['both', 'PC + Mobile'], ['pc', 'PC'], ['mobile', 'Mobile'], ['none', 'Chưa có bản']];
+function pfKey(r) {
+  const p = r.rel?.platforms || [];
+  const pc = p.some(x => x === 'PC' || x === 'Mac' || x === 'Linux'), mb = p.includes('Android');
+  return pc && mb ? 'both' : pc ? 'pc' : mb ? 'mobile' : 'none';
+}
+function cardHTML(r) {
+  const name = dispName(r), desc = dispDesc(r), rel = r.rel, k = pfKey(r);
   const hid = S.hidden.includes(r.name);
   const ver = rel ? `<span class="ver ${isNew(rel.date) ? 'new' : ''}" title="${rel.date ? 'Phát hành ' + new Date(rel.date).toLocaleDateString('vi-VN') : 'Tag mới nhất'}">${esc(rel.tag)}</span>`
                   : `<span class="ver none">chưa có bản</span>`;
-  const pf = rel?.platforms?.length ? `<span class="pf">${rel.platforms.map(p => `<span><svg><use href="#${PF_ICON[p] || 'i-monitor'}"/></svg>${p}</span>`).join('')}</span>` : '';
-  return `<div class="row ${hid ? 'hid' : ''}" data-repo="${esc(r.name)}" tabindex="0" title="${esc(name)}">
+  const pc = k === 'both' || k === 'pc', mb = k === 'both' || k === 'mobile';
+  const pf = rel ? `<span class="pf" title="${[pc ? 'PC' : '', mb ? 'Mobile' : ''].filter(Boolean).join(' + ') || 'Chưa rõ nền tảng'}"><svg class="${pc ? 'on' : ''}" style="${pc ? '' : 'opacity:.25'}"><use href="#i-monitor"/></svg><svg class="${mb ? 'on' : ''}" style="${mb ? '' : 'opacity:.25'}"><use href="#i-phone"/></svg></span>` : '';
+  const when = rel?.date ? ago(rel.date) : (rel ? '' : ago(r.pushed));
+  return `<div class="card ${hid ? 'hid' : ''}" data-repo="${esc(r.name)}" tabindex="0" title="${esc(name)}${desc ? ' — ' + esc(desc) : ''}">
     <div class="chip" style="background:${colorOf(r.name)}">${esc(name[0].toUpperCase())}</div>
-    <div><div class="nm"><span>${esc(name)}</span>${r.private ? '<svg><use href="#i-lock"/></svg>' : ''}</div><div class="ds">${esc(desc) || '<i>Chưa có mô tả</i>'}</div></div>
-    <div class="meta"><div class="vl">${pf}${ver}</div><span class="when">${rel?.date ? ago(rel.date) : (rel ? '' : 'cập nhật ' + ago(r.pushed))}</span></div>
+    <div class="l1"><div class="nm"><span>${esc(name)}</span>${r.private ? '<svg><use href="#i-lock"/></svg>' : ''}</div>${pf}</div>
+    <div class="l2"><div class="ds">${esc(desc) || '<i>Chưa có mô tả</i>'}</div>${ver}<span class="when">${when}</span></div>
   </div>`;
 }
 function render() {
-  renderGroups();
+  renderBar();
   const main = $('#main'); const all = visibleRepos();
   const hiddenN = all.filter(r => S.hidden.includes(r.name)).length;
   if (!S.cache) {
@@ -173,35 +182,42 @@ function render() {
   let html = '';
   const section = (label, list, key) => {
     if (!list.length) return;
-    html += `<div class="sec">${esc(label)} · ${list.length}</div><div class="list" data-key="${esc(key)}">${sortByOrder(list, key).map(rowHTML).join('')}</div>`;
+    html += `<div class="sec">${esc(label)} · ${list.length}</div><div class="grid" data-key="${esc(key)}">${sortByOrder(list, key).map(cardHTML).join('')}</div>`;
   };
   const shown = all.filter(r => !S.hidden.includes(r.name));
-  if (S.sel === 'all') {
-    for (const g of S.groups) section(g.name, shown.filter(r => groupOf(r.name) === g.id), g.id);
-    section('Chưa phân nhóm', shown.filter(r => groupOf(r.name) === 'none'), 'none');
-  } else if (S.sel === 'hidden') {
-    section('Đã ẩn', all.filter(r => S.hidden.includes(r.name)), 'hidden');
-  } else if (S.sel === 'none') {
-    section('Chưa phân nhóm', shown.filter(r => groupOf(r.name) === 'none'), 'none');
+  if (S.mode === 'group') {
+    if (S.sel === 'all') {
+      for (const g of S.groups) section(g.name, shown.filter(r => groupOf(r.name) === g.id), g.id);
+      section('Chưa phân nhóm', shown.filter(r => groupOf(r.name) === 'none'), 'none');
+    } else if (S.sel === 'hidden') section('Đã ẩn', all.filter(r => S.hidden.includes(r.name)), 'hidden');
+    else if (S.sel === 'none') section('Chưa phân nhóm', shown.filter(r => groupOf(r.name) === 'none'), 'none');
+    else { const g = S.groups.find(x => x.id === S.sel); if (g) section(g.name, shown.filter(r => groupOf(r.name) === g.id), g.id); }
   } else {
-    const g = S.groups.find(x => x.id === S.sel);
-    if (g) section(g.name, shown.filter(r => groupOf(r.name) === g.id), g.id);
+    for (const [k, label] of PF_SECTIONS) if (S.pf === 'all' || S.pf === k) section(label, shown.filter(r => pfKey(r) === k), 'pf:' + k);
   }
   if (!html) html = `<div class="empty fx-rise"><h2>${S.q ? 'Không tìm thấy app nào' : 'Trống'}</h2><div>${S.q ? 'Thử từ khóa khác.' : 'Chuột phải vào một app (hoặc giữ lâu trên điện thoại) để đưa vào nhóm này.'}</div></div>`;
   main.innerHTML = html;
   $('#stat').textContent = `${shown.length} app · ${S.groups.length} nhóm` + (hiddenN ? ` · ${hiddenN} đã ẩn` : '') + (S.cache ? ` · đã tải ${ago(new Date(S.cache.ts).toISOString())}` : '');
 }
-function renderGroups() {
+function renderBar() {
   const all = (S.cache?.repos || []).filter(r => r.name !== SELF_REPO);
   const shown = all.filter(r => !S.hidden.includes(r.name));
-  const cnt = id => id === 'all' ? shown.length : id === 'hidden' ? all.length - shown.length : shown.filter(r => groupOf(r.name) === id).length;
-  const items = [['all', 'Tất cả'], ...S.groups.map(g => [g.id, g.name]), ['none', 'Chưa phân nhóm']];
-  if (cnt('hidden')) items.push(['hidden', 'Đã ẩn']);
-  $('#side').innerHTML = `<h4>Nhóm</h4>` + items.map(([id, nm]) =>
-    `<button type="button" class="grp ${S.sel === id ? 'sel' : ''} ${id === 'hidden' || id === 'none' ? 'dim' : ''}" data-g="${esc(id)}">${esc(nm)}<span class="n">${cnt(id)}</span></button>`).join('')
-    + `<button type="button" class="grp add" id="addGroup"><svg><use href="#i-plus"/></svg>Thêm nhóm</button>`;
-  $('#chips').innerHTML = items.map(([id, nm]) => `<button type="button" class="${S.sel === id ? 'sel' : ''}" data-g="${esc(id)}">${esc(nm)} · ${cnt(id)}</button>`).join('')
-    + `<button type="button" class="add" id="addGroupM">+ Nhóm</button>`;
+  $$('#seg button').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
+  const on = $('#seg button.on'); const ind = $('#seg .ind');
+  if (on) { ind.style.left = on.offsetLeft + 'px'; ind.style.width = on.offsetWidth + 'px'; }
+  let items;
+  if (S.mode === 'group') {
+    const cnt = id => id === 'all' ? shown.length : id === 'hidden' ? all.length - shown.length : shown.filter(r => groupOf(r.name) === id).length;
+    items = [['all', 'Tất cả', ''], ...S.groups.map(g => [g.id, g.name, '']), ['none', 'Chưa phân nhóm', 'dim']];
+    if (cnt('hidden')) items.push(['hidden', 'Đã ẩn', 'dim']);
+    $('#chips').innerHTML = items.map(([id, nm, cls]) => `<button type="button" class="${S.sel === id ? 'sel' : ''} ${cls}" data-g="${esc(id)}">${esc(nm)}<span class="n">${cnt(id)}</span></button>`).join('')
+      + `<button type="button" class="add" id="addGroup" title="Tạo nhóm mới"><svg><use href="#i-plus"/></svg>Nhóm</button>`;
+  } else {
+    const cnt = k => k === 'all' ? shown.length : shown.filter(r => pfKey(r) === k).length;
+    const ic = { all: '', both: '<svg><use href="#i-monitor"/></svg><svg><use href="#i-phone"/></svg>', pc: '<svg><use href="#i-monitor"/></svg>', mobile: '<svg><use href="#i-phone"/></svg>', none: '' };
+    items = [['all', 'Tất cả', ''], ...PF_SECTIONS.map(([k, l]) => [k, l, k === 'none' ? 'dim' : ''])];
+    $('#chips').innerHTML = items.map(([id, nm, cls]) => `<button type="button" class="${S.pf === id ? 'sel' : ''} ${cls}" data-pf="${esc(id)}">${ic[id]}${esc(nm)}<span class="n">${cnt(id)}</span></button>`).join('');
+  }
 }
 
 /* ---------- menu ngữ cảnh ---------- */
@@ -396,7 +412,7 @@ function toast(msg, { action, run, undo, sticky, ok } = {}) {
   if (!sticky) toastTimer = setTimeout(hide, action ? 6000 : 3200);
 }
 
-/* ---------- kéo thả sắp xếp (pointer events + FLIP) ---------- */
+/* ---------- kéo thả sắp xếp (pointer events + FLIP, lưới 2 chiều) ---------- */
 function flip(container, mutate) {
   const first = new Map([...container.children].map(el => [el, el.getBoundingClientRect()]));
   mutate();
@@ -404,8 +420,8 @@ function flip(container, mutate) {
   for (const el of container.children) {
     if (el.classList.contains('dragging')) continue;
     const a = first.get(el); if (!a) continue;
-    const b = el.getBoundingClientRect(), dy = a.top - b.top; if (!dy) continue;
-    el.style.transition = 'none'; el.style.transform = `translateY(${dy}px)`;
+    const b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top; if (!dx && !dy) continue;
+    el.style.transition = 'none'; el.style.transform = `translate(${dx}px,${dy}px)`;
     requestAnimationFrame(() => { el.style.transition = 'transform var(--t-med) var(--ease-out)'; el.style.transform = ''; });
   }
 }
@@ -413,13 +429,13 @@ let drag = null;
 const main = $('#main');
 main.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
-  const row = e.target.closest('.row'); if (!row || S.sel === 'hidden') return;
-  const list = row.parentElement; if (!list.classList.contains('list')) return;
+  const card = e.target.closest('.card'); if (!card) return;
+  const list = card.parentElement; if (!list.classList.contains('grid')) return;
+  if (S.mode === 'group' && S.sel === 'hidden') return;
   const touch = e.pointerType !== 'mouse';
-  drag = { row, list, x0: e.clientX, y0: e.clientY, active: false, holdOk: !touch, id: e.pointerId, timer: 0, longPressed: false };
+  drag = { card, list, x0: e.clientX, y0: e.clientY, active: false, holdOk: !touch, id: e.pointerId, timer: 0, longPressed: false };
   if (touch) drag.timer = setTimeout(() => { if (!drag) return; drag.holdOk = true; navigator.vibrate?.(15);
-    // giữ lâu không kéo → mở menu
-    drag.menuTimer = setTimeout(() => { if (drag && !drag.active) { drag.longPressed = true; repoMenu(row.dataset.repo, e.clientX, e.clientY); } }, 250); }, 320);
+    drag.menuTimer = setTimeout(() => { if (drag && !drag.active) { drag.longPressed = true; repoMenu(card.dataset.repo, e.clientX, e.clientY); } }, 250); }, 320);
 });
 main.addEventListener('pointermove', e => {
   if (!drag || e.pointerId !== drag.id) return;
@@ -428,58 +444,65 @@ main.addEventListener('pointermove', e => {
     if (!drag.holdOk) { if (Math.hypot(dx, dy) > 6) { clearTimeout(drag.timer); drag = null; } return; }   // cuộn trang trên cảm ứng
     if (Math.hypot(dx, dy) < 4) return;
     clearTimeout(drag.menuTimer); closeMenu();
-    drag.active = true; drag.row.classList.add('dragging'); drag.row.setPointerCapture?.(e.pointerId); drag.h = drag.row.offsetHeight;
+    drag.active = true; drag.card.classList.add('dragging'); drag.card.setPointerCapture?.(e.pointerId);
     document.body.style.cursor = 'grabbing';
   }
   e.preventDefault();
-  drag.row.style.transform = `translateY(${dy}px) scale(1.03)`;
-  // tìm vị trí mới trong list
-  const rows = [...drag.list.children].filter(r => r !== drag.row);
-  const cy = e.clientY;
+  drag.card.style.transform = `translate(${dx}px,${dy}px) scale(1.04)`;
+  // vị trí mới: ô gần con trỏ nhất theo thứ tự đọc (hàng trước, cột sau)
+  const others = [...drag.list.children].filter(c => c !== drag.card);
   let before = null;
-  for (const r of rows) { const b = r.getBoundingClientRect(); if (cy < b.top + b.height / 2) { before = r; break; } }
-  const cur = drag.row.nextElementSibling;
-  if (before !== cur) {
-    const top0 = drag.row.getBoundingClientRect().top;
-    flip(drag.list, () => drag.list.insertBefore(drag.row, before));
-    const top1 = drag.row.getBoundingClientRect().top; drag.y0 += top1 - top0;      // giữ ô đang kéo bám theo con trỏ
-    drag.row.style.transform = `translateY(${e.clientY - drag.y0}px) scale(1.03)`;
+  for (const c of others) {
+    const b = c.getBoundingClientRect();
+    const rowBelow = e.clientY < b.top, sameRow = e.clientY >= b.top && e.clientY <= b.bottom;
+    if (rowBelow || (sameRow && e.clientX < b.left + b.width / 2)) { before = c; break; }
   }
-  // tự cuộn khi kéo sát mép
+  if (before !== drag.card.nextElementSibling) {
+    const r0 = drag.card.getBoundingClientRect();
+    flip(drag.list, () => drag.list.insertBefore(drag.card, before));
+    const r1 = drag.card.getBoundingClientRect(); drag.x0 += r1.left - r0.left; drag.y0 += r1.top - r0.top;   // ô kéo bám theo con trỏ
+    drag.card.style.transform = `translate(${e.clientX - drag.x0}px,${e.clientY - drag.y0}px) scale(1.04)`;
+  }
   const mb = main.getBoundingClientRect();
-  if (cy < mb.top + 40) main.scrollTop -= 8; else if (cy > mb.bottom - 40) main.scrollTop += 8;
+  if (e.clientY < mb.top + 40) main.scrollTop -= 8; else if (e.clientY > mb.bottom - 40) main.scrollTop += 8;
+  // kéo lên chip nhóm → đánh dấu
+  $$('#chips button[data-g]').forEach(b => { const r = b.getBoundingClientRect(); b.classList.toggle('drop', e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom); });
 });
 function endDrag(e, cancel) {
   if (!drag || (e && e.pointerId !== drag.id)) return;
-  if (e === null) { try { drag.row.releasePointerCapture?.(drag.id); } catch {} }
+  if (e === null) { try { drag.card.releasePointerCapture?.(drag.id); } catch {} }
   clearTimeout(drag.timer); clearTimeout(drag.menuTimer);
   const d = drag; drag = null; document.body.style.cursor = '';
   if (!d.active) return;
-  d.row.classList.remove('dragging');
-  d.row.style.transition = reduced ? 'none' : 'transform var(--t-med) var(--ease-out)'; d.row.style.transform = '';
-  setTimeout(() => { d.row.style.transition = ''; }, 250);
+  d.card.classList.remove('dragging');
+  const dropChip = $('#chips button.drop'); $$('#chips button.drop').forEach(b => b.classList.remove('drop'));
+  if (!cancel && dropChip && e) {
+    const g = dropChip.dataset.g; if (g && g !== 'hidden' && g !== 'all') { d.card.style.transform = ''; moveTo(d.card.dataset.repo, g); toast('Đã chuyển vào ' + dropChip.firstChild.textContent); return; }
+  }
+  d.card.style.transition = reduced ? 'none' : 'transform var(--t-med) var(--ease-out)'; d.card.style.transform = '';
+  setTimeout(() => { d.card.style.transition = ''; }, 250);
   if (cancel) { render(); return; }
-  S.order[d.list.dataset.key] = [...d.list.children].map(r => r.dataset.repo); save('order');
+  S.order[d.list.dataset.key] = [...d.list.children].map(c => c.dataset.repo); save('order');
 }
 main.addEventListener('pointerup', e => endDrag(e, false));
 main.addEventListener('pointercancel', e => endDrag(e, true));
-main.addEventListener('contextmenu', e => { const row = e.target.closest('.row'); if (!row) return; e.preventDefault(); if (drag?.longPressed) { drag = null; return; } repoMenu(row.dataset.repo, e.clientX, e.clientY); });
-main.addEventListener('keydown', e => { const row = e.target.closest('.row'); if (!row) return; if (e.key === 'Enter' || e.key === ' ' || e.key === 'ContextMenu') { e.preventDefault(); const b = row.getBoundingClientRect(); repoMenu(row.dataset.repo, b.left + 40, b.top + 24); } });
+main.addEventListener('contextmenu', e => { const card = e.target.closest('.card'); if (!card) return; e.preventDefault(); if (drag?.longPressed) { drag = null; return; } repoMenu(card.dataset.repo, e.clientX, e.clientY); });
+main.addEventListener('keydown', e => { const card = e.target.closest('.card'); if (!card) return; if (e.key === 'Enter' || e.key === ' ' || e.key === 'ContextMenu') { e.preventDefault(); const b = card.getBoundingClientRect(); repoMenu(card.dataset.repo, b.left + 40, b.top + 24); } });
 
-/* ---------- sự kiện nhóm ---------- */
-function onGroupClick(e) {
+/* ---------- chế độ sắp xếp + chip ---------- */
+$('#seg').addEventListener('click', e => { const b = e.target.closest('button[data-mode]'); if (!b) return; S.mode = b.dataset.mode; save('mode'); render(); });
+$('#chips').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.id === 'addGroup' || b.id === 'addGroupM') return addGroup();
+  if (b.id === 'addGroup') return addGroup();
   if (b.dataset.g) { S.sel = b.dataset.g; save('sel'); render(); }
-}
-$('#side').addEventListener('click', onGroupClick);
-$('#chips').addEventListener('click', onGroupClick);
-$('#side').addEventListener('contextmenu', e => { const b = e.target.closest('button[data-g]'); if (!b || !S.groups.some(g => g.id === b.dataset.g)) return; e.preventDefault(); groupMenu(b.dataset.g, e.clientX, e.clientY); });
+  if (b.dataset.pf) { S.pf = b.dataset.pf; save('pf'); render(); }
+});
+$('#chips').addEventListener('contextmenu', e => { const b = e.target.closest('button[data-g]'); if (b && S.groups.some(g => g.id === b.dataset.g)) { e.preventDefault(); groupMenu(b.dataset.g, e.clientX, e.clientY); } });
 let chipHold = 0;
-$('#chips').addEventListener('pointerdown', e => { const b = e.target.closest('button[data-g]'); if (!b || !S.groups.some(g => g.id === b.dataset.g)) return;
+$('#chips').addEventListener('pointerdown', e => { const b = e.target.closest('button[data-g]'); if (!b || e.pointerType === 'mouse' || !S.groups.some(g => g.id === b.dataset.g)) return;
   chipHold = setTimeout(() => { navigator.vibrate?.(15); groupMenu(b.dataset.g, e.clientX, e.clientY); }, 450); });
 ['pointerup', 'pointercancel', 'pointermove'].forEach(ev => $('#chips').addEventListener(ev, e => { if (ev === 'pointermove' && Math.abs(e.movementX) < 3) return; clearTimeout(chipHold); }));
-$('#chips').addEventListener('contextmenu', e => { const b = e.target.closest('button[data-g]'); if (b && S.groups.some(g => g.id === b.dataset.g)) { e.preventDefault(); groupMenu(b.dataset.g, e.clientX, e.clientY); } });
+addEventListener('resize', () => { const on = $('#seg button.on'); if (on) { $('#seg .ind').style.left = on.offsetLeft + 'px'; $('#seg .ind').style.width = on.offsetWidth + 'px'; } });
 
 /* ---------- nút trên cùng ---------- */
 $('#btnReload').onclick = () => reload(false); $('#mbtnReload').onclick = () => reload(false);
@@ -505,5 +528,5 @@ if (S.cache) setDot('ok', 'Dữ liệu tạm · tải ' + ago(new Date(S.cache.t
 if (!S.cache || Date.now() - S.cache.ts > CACHE_TTL) reload(false);
 setTimeout(() => checkUpdate(false), 2500);
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
-if (!reduced) $$('.side,.main').forEach((el, i) => { el.classList.add('fx-rise'); el.style.animationDelay = i * 60 + 'ms'; });
+if (!reduced) $$('.bar,.main').forEach((el, i) => { el.classList.add('fx-rise'); el.style.animationDelay = i * 60 + 'ms'; });
 })();

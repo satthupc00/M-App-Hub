@@ -60,12 +60,16 @@
     <span class="latest" id="mlatestBadge" hidden>latest</span>
     <button type="button" class="ibtn upd" id="mbtnUpd" title="Kiểm tra cập nhật" aria-label="Kiểm tra cập nhật"><svg><use href="#i-refresh"/></svg></button>
   </div>
-  <div class="chips" id="chips"></div>
-
-  <div class="body">
-    <nav class="side" id="side" aria-label="Nhóm"></nav>
-    <main class="main" id="main"></main>
+  <div class="bar">
+    <div class="seg" id="seg" role="tablist" aria-label="Chế độ sắp xếp">
+      <button type="button" data-mode="group" title="Sắp xếp theo nhóm (App lớn, App nhỏ…)"><svg><use href="#i-folder"/></svg><span>Nhóm</span></button>
+      <button type="button" data-mode="platform" title="Sắp xếp theo nền tảng (PC, Mobile, cả hai)"><svg><use href="#i-monitor"/></svg><span>Nền tảng</span></button>
+      <i class="ind"></i>
+    </div>
+    <div class="chips" id="chips"></div>
   </div>
+
+  <main class="main" id="main"></main>
 
   <footer class="foot"><span id="stat"></span><span class="hint">Kéo để sắp xếp · chuột phải để đổi nhóm, sửa mô tả hoặc ẩn</span><span class="credit">Created by Mondiro</span></footer>
   <div class="mcredit">Created by Mondiro</div>

@@ -1,13 +1,14 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "date": "2026-10-31",
   "new": [
-    "Hiển thị toàn bộ app trên GitHub của Mondiro: tên, mô tả 1 dòng, bản mới nhất và nền tảng (PC / Android)",
-    "Tự tạo nhóm (App lớn, App nhỏ…), đổi nhóm bằng chuột phải hoặc giữ lâu, kéo để sắp xếp",
-    "Sửa tên / mô tả hiển thị, ẩn app không cần xem",
-    "Chạy trên Windows (cài đặt, tự cập nhật) và Z Fold 7 (mở bằng trình duyệt, thêm vào màn hình chính)",
-    "Nút kiểm tra bản cập nhật, bảng What's new trong Cài đặt"
+    "Hai chế độ sắp xếp: theo Nhóm (App lớn, App nhỏ…) hoặc theo Nền tảng (PC, Mobile, cả hai)",
+    "Kéo thả một app lên chip nhóm để chuyển nhóm nhanh"
   ],
-  "improved": [],
+  "improved": [
+    "Bản PC chuyển sang lưới thẻ nhỏ gọn, bỏ panel Nhóm bên trái để xem được nhiều app hơn",
+    "Nền tảng chỉ hiện icon màn hình / điện thoại, không ghi chữ",
+    "Thanh chọn nhóm / nền tảng đặt ngay dưới header, dùng chung cho PC và điện thoại"
+  ],
   "fixed": []
 }
