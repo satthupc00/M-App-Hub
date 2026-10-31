@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- B: Hub - nút đỏ ở giữa nối với 3 ô app -->
+  <defs>
+    <radialGradient id="rB" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FF8A8C"/><stop offset="1" stop-color="#C41E22"/></radialGradient>
+    <linearGradient id="bB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4FA8FF"/><stop offset="1" stop-color="#1B55C4"/></linearGradient>
+    <linearGradient id="bBd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1747B8"/><stop offset="1" stop-color="#0E2E7A"/></linearGradient>
+    <linearGradient id="yB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#E8930A"/></linearGradient>
+    <linearGradient id="yBd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C77607"/><stop offset="1" stop-color="#8A4F02"/></linearGradient>
+    <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5BE3C7"/><stop offset="1" stop-color="#149E85"/></linearGradient>
+    <linearGradient id="gBd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F7E6A"/><stop offset="1" stop-color="#085546"/></linearGradient>
+    <linearGradient id="hl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  </defs>
+  <ellipse cx="256" cy="488" rx="200" ry="20" fill="#000" opacity=".28"/>
+  <!-- nan hoa -->
+  <g stroke="#2B2F36" stroke-width="44" stroke-linecap="round">
+    <line x1="256" y1="300" x2="118" y2="124"/>
+    <line x1="256" y1="300" x2="394" y2="124"/>
+    <line x1="256" y1="300" x2="256" y2="440"/>
+  </g>
+  <!-- ô trên trái (xanh) -->
+  <rect x="24" y="44" width="176" height="176" rx="36" fill="url(#bBd)"/>
+  <rect x="24" y="28" width="176" height="176" rx="36" fill="url(#bB)"/>
+  <rect x="42" y="42" width="72" height="36" rx="18" fill="url(#hl)"/>
+  <!-- ô trên phải (vàng) -->
+  <rect x="312" y="44" width="176" height="176" rx="36" fill="url(#yBd)"/>
+  <rect x="312" y="28" width="176" height="176" rx="36" fill="url(#yB)"/>
+  <rect x="330" y="42" width="72" height="36" rx="18" fill="url(#hl)"/>
+  <!-- ô dưới (xanh ngọc) -->
+  <rect x="168" y="368" width="176" height="114" rx="36" fill="url(#gBd)"/>
+  <rect x="168" y="352" width="176" height="114" rx="36" fill="url(#gB)"/>
+  <rect x="186" y="366" width="72" height="30" rx="15" fill="url(#hl)"/>
+  <!-- nút hub đỏ -->
+  <circle cx="256" cy="300" r="84" fill="#8E1216"/>
+  <circle cx="256" cy="284" r="84" fill="url(#rB)"/>
+  <ellipse cx="230" cy="250" rx="34" ry="20" fill="#fff" opacity=".45"/>
+</svg>

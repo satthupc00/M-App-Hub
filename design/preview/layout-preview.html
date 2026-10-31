@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#17181C;color:#E8E9EC;font:14px/1.45 "Segoe UI",system-ui,sans-serif;padding:28px 32px;width:1500px;box-sizing:border-box}
+h1{font-size:20px;margin:0 0 4px}h1 b{color:#E5383B}.sub{color:#8D929C;margin-bottom:20px}
+.lbl{font-size:12.5px;color:#8D929C;margin:0 0 8px}.lbl b{color:#E8E9EC}
+.frame{border:1px solid #363A42;border-radius:10px;overflow:hidden;background:#1F2126}
+.frame img{display:block;width:100%}
+.grid{display:grid;grid-template-columns:1180px 1fr;gap:24px;align-items:start}
+.notes{background:#1F2126;border:1px solid #363A42;border-radius:10px;padding:14px 16px;font-size:12.5px}
+.notes h3{margin:0 0 8px;font-size:13px}.notes ul{margin:0;padding-left:16px}.notes li{margin:4px 0}.notes li b{color:#fff}
+.mob{display:grid;grid-template-columns:360px 728px;gap:24px;margin-top:26px;align-items:start}
+.k{display:inline-block;background:#2eb87224;color:#2EB872;font-weight:800;font-size:10.5px;padding:1px 7px;border-radius:20px}
+</style></head><body>
+<h1><b>M</b> AppHub · preview layout</h1>
+<div class="sub">Dashboard quản lý app trên GitHub · dark theme chuẩn Mondiro · dữ liệu trong ảnh là ví dụ (tên repo lấy từ GitHub của bạn, mô tả & version là mẫu).</div>
+<div class="grid">
+ <div><div class="lbl"><b>Windows</b> · 1180×720 · header chính là thanh tiêu đề (3 nút cửa sổ nằm góc phải, cùng màu)</div><div class="frame"><img src="shot-desktop.png"></div></div>
+ <div class="notes"><h3>Cách hoạt động</h3><ul>
+  <li><b>Tên app, mô tả 1 dòng, version</b> lấy tự động từ GitHub (tên repo, mô tả repo, tag Release mới nhất). Có thể sửa tên/mô tả hiển thị ngay trong app nếu muốn.</li>
+  <li><b>Nhóm</b> tự tạo (App lớn, App nhỏ, Tool làm game…), chuột phải / giữ-kéo app để đổi nhóm, kéo để sắp xếp.</li>
+  <li><b>Viền xanh</b> ở version = vừa ra bản mới trong 3 ngày. Dòng dưới là "bao lâu trước".</li>
+  <li><b>Nhấn vào app</b> → mở trang GitHub / trang Release của app đó.</li>
+  <li><b>Chấm xanh</b> góc phải = đã tải xong danh sách từ GitHub (vàng = đang tải, đỏ = lỗi mạng). Nút mây = tải lại.</li>
+  <li><b>Nút mũi tên xoay</b> = kiểm tra bản cập nhật của chính M AppHub; đã mới nhất thì hiện <span class="k">latest</span> cạnh tên app.</li>
+  <li><b>Cài đặt</b>: token GitHub (nếu muốn xem repo private), ẩn/hiện repo, What's new.</li>
+  <li>Không framework nặng: 1 file HTML + JS thuần, Electron cho Windows, Capacitor cho Android.</li>
+ </ul></div>
+</div>
+<div class="mob">
+ <div><div class="lbl"><b>Z Fold 7 · màn ngoài</b> (360×840) · không header, nhóm thành hàng chip cuộn ngang</div><div class="frame"><img src="shot-fold-outer.png"></div></div>
+ <div><div class="lbl"><b>Z Fold 7 · màn trong</b> (728×656) · 2 cột, nhóm bên trái như bản Windows</div><div class="frame"><img src="shot-fold-inner.png"></div></div>
+</div>
+</body></html>

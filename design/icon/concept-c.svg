@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- C: Kệ app - 3 khối app đứng trên kệ, khối đỏ ở giữa cao hơn -->
+  <defs>
+    <linearGradient id="bC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4FA8FF"/><stop offset="1" stop-color="#1B55C4"/></linearGradient>
+    <linearGradient id="bCs" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1747B8"/><stop offset="1" stop-color="#0E2E7A"/></linearGradient>
+    <linearGradient id="rC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF7E80"/><stop offset="1" stop-color="#D62A2E"/></linearGradient>
+    <linearGradient id="rCs" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#A3161A"/><stop offset="1" stop-color="#6E0E12"/></linearGradient>
+    <linearGradient id="yC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#E8930A"/></linearGradient>
+    <linearGradient id="yCs" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C77607"/><stop offset="1" stop-color="#8A4F02"/></linearGradient>
+    <linearGradient id="sh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5B616C"/><stop offset="1" stop-color="#2B2F36"/></linearGradient>
+    <linearGradient id="hl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  </defs>
+  <ellipse cx="256" cy="494" rx="220" ry="16" fill="#000" opacity=".28"/>
+  <!-- kệ -->
+  <rect x="16" y="428" width="480" height="40" rx="12" fill="#1F2126"/>
+  <rect x="16" y="412" width="480" height="40" rx="12" fill="url(#sh)"/>
+  <!-- khối xanh trái -->
+  <rect x="40" y="176" width="130" height="236" rx="22" fill="url(#bCs)"/>
+  <rect x="40" y="160" width="130" height="236" rx="22" fill="url(#bC)"/>
+  <rect x="56" y="176" width="52" height="34" rx="17" fill="url(#hl)"/>
+  <!-- khối vàng phải -->
+  <rect x="342" y="216" width="130" height="196" rx="22" fill="url(#yCs)"/>
+  <rect x="342" y="200" width="130" height="196" rx="22" fill="url(#yC)"/>
+  <rect x="358" y="216" width="52" height="34" rx="17" fill="url(#hl)"/>
+  <!-- khối đỏ giữa, cao nhất -->
+  <rect x="186" y="80" width="140" height="332" rx="24" fill="url(#rCs)"/>
+  <rect x="186" y="60" width="140" height="332" rx="24" fill="url(#rC)"/>
+  <rect x="204" y="78" width="56" height="36" rx="18" fill="url(#hl)"/>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- A: 4 ô app, 1 ô đỏ nổi lên (bản mới) -->
+  <defs>
+    <linearGradient id="bA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4FA8FF"/><stop offset="1" stop-color="#1B55C4"/></linearGradient>
+    <linearGradient id="bAd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1747B8"/><stop offset="1" stop-color="#0E2E7A"/></linearGradient>
+    <linearGradient id="rA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF7E80"/><stop offset="1" stop-color="#D62A2E"/></linearGradient>
+    <linearGradient id="rAd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A3161A"/><stop offset="1" stop-color="#6E0E12"/></linearGradient>
+    <linearGradient id="hl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  </defs>
+  <ellipse cx="256" cy="486" rx="208" ry="22" fill="#000" opacity=".28"/>
+  <!-- ô dưới trái -->
+  <rect x="32" y="278" width="200" height="200" rx="40" fill="url(#bAd)"/>
+  <rect x="32" y="262" width="200" height="200" rx="40" fill="url(#bA)"/>
+  <rect x="52" y="278" width="80" height="40" rx="20" fill="url(#hl)"/>
+  <!-- ô dưới phải -->
+  <rect x="280" y="278" width="200" height="200" rx="40" fill="url(#bAd)"/>
+  <rect x="280" y="262" width="200" height="200" rx="40" fill="url(#bA)"/>
+  <rect x="300" y="278" width="80" height="40" rx="20" fill="url(#hl)"/>
+  <!-- ô trên trái -->
+  <rect x="32" y="46" width="200" height="200" rx="40" fill="url(#bAd)"/>
+  <rect x="32" y="30" width="200" height="200" rx="40" fill="url(#bA)"/>
+  <rect x="52" y="46" width="80" height="40" rx="20" fill="url(#hl)"/>
+  <!-- ô đỏ nổi lên (trên phải), bay cao hơn -->
+  <ellipse cx="380" cy="232" rx="90" ry="14" fill="#000" opacity=".30"/>
+  <rect x="280" y="22" width="200" height="200" rx="40" fill="url(#rAd)"/>
+  <rect x="280" y="2" width="200" height="200" rx="40" fill="url(#rA)"/>
+  <rect x="300" y="18" width="80" height="40" rx="20" fill="url(#hl)"/>
+</svg>

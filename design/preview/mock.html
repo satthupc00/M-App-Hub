@@ -1,0 +1,148 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>M AppHub</title>
+<style>
+:root{--chrome:#1F2126;--panel:#26292F;--line:#363A42;--hover:#2F333A;--stage:#2B2D31;--text:#E8E9EC;--muted:#8D929C;--red:#E5383B;--warn:#F2B84B;--selected-bg:#3A2426;
+ --ease-out:cubic-bezier(.22,1,.36,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);--t-fast:.12s;--t-med:.22s}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--chrome);color:var(--text);font:13px/1.4 "Segoe UI",system-ui,sans-serif;overflow:hidden;user-select:none}
+:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;border-radius:6px;
+ transition:background-color var(--t-fast) ease,border-color var(--t-fast) ease,color var(--t-fast) ease,box-shadow var(--t-med) var(--ease-out),transform var(--t-med) var(--ease-out)}
+button:not(:disabled):active{transform:scale(.95);transition-duration:.06s}
+svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.app{display:flex;flex-direction:column;height:100%}
+/* header desktop */
+.top{display:flex;align-items:center;gap:16px;padding:10px 14px;border-bottom:1px solid var(--line);flex:0 0 auto;min-height:58px;-webkit-app-region:drag}
+.electron .top{padding-right:150px}
+.top button,.top input,.top .no-drag{-webkit-app-region:no-drag}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-icon{width:34px;height:34px;flex:0 0 auto}
+.brand-name{font-size:17px;font-weight:700;line-height:34px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.brand-name .m{color:var(--red)}.brand-name .a{color:#fff}
+.latest{font-size:10.5px;font-weight:800;color:#2EB872;background:#2eb87224;padding:1px 7px;border-radius:20px;line-height:16px}
+.tools{display:flex;gap:6px;align-items:center;margin-left:auto}
+.ibtn{width:34px;height:34px;display:grid;place-items:center;color:var(--muted);border:1px solid transparent}
+.ibtn:hover{border-color:var(--red);color:var(--text);transform:translateY(-1px)}
+.ibtn.upd{color:#2EB872}
+.search{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:6px;height:32px;padding:0 10px;width:220px;color:var(--muted)}
+.search input{border:0;background:none;color:var(--text);outline:0;font:inherit;width:100%}
+.syncdot{width:38px;height:38px;border-radius:50%;display:grid;place-items:center}
+.syncdot i{width:12px;height:12px;border-radius:50%;background:#3DDC8A;box-shadow:0 0 0 4px rgba(61,220,138,.18)}
+/* body */
+.body{display:flex;flex:1;min-height:0}
+.side{width:220px;flex:0 0 auto;background:var(--panel);border-right:1px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.side h4{margin:4px 8px 6px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.grp{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;text-align:left;width:100%;color:var(--text)}
+.grp .n{margin-left:auto;color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}
+.grp:hover{background:var(--hover)}
+.grp.sel{background:var(--selected-bg);box-shadow:inset 3px 0 0 var(--red)}
+.grp.add{color:var(--muted);margin-top:auto;border:1px dashed var(--line)}
+.grp.add:hover{border-color:var(--red);color:var(--text)}
+.main{flex:1;min-width:0;background:var(--stage);overflow:auto;padding:8px 14px 16px}
+.sec{margin:10px 0 4px;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.sec::after{content:'';flex:1;height:1px;background:var(--line)}
+.row{display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;padding:8px 10px;border-radius:6px;
+ transition:transform var(--t-med) var(--ease-out),background-color var(--t-fast),box-shadow var(--t-med) var(--ease-out);cursor:pointer}
+.row:hover{background:var(--hover);transform:translateX(3px);box-shadow:inset 3px 0 0 var(--red)}
+.chip{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff}
+.nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.nm svg{width:12px;height:12px;color:var(--muted)}
+.ds{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.ver{font-variant-numeric:tabular-nums;font-weight:700;font-size:12px;background:var(--panel);border:1px solid var(--line);padding:1px 8px;border-radius:20px}
+.ver.new{border-color:#2EB872;color:#2EB872}
+.when{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.foot{display:flex;align-items:center;gap:12px;padding:6px 14px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;flex:0 0 auto}
+.credit{margin-left:auto;color:#6B707A;font-size:11px;white-space:nowrap}
+/* mobile top strip */
+.mstrip{display:none}
+.chips{display:none}
+.mcredit{display:none}
+@media (max-width:900px){
+ .top,.foot{display:none}
+ .mstrip{display:flex;justify-content:flex-end;align-items:center;gap:2px;padding:calc(env(safe-area-inset-top) + 2px) 6px 0}
+ .mstrip .lt{font-size:10.5px;font-weight:800;color:#2EB872;background:#2eb87224;padding:1px 7px;border-radius:20px;margin-right:2px}
+ .main{padding:4px 10px 56px}
+ .mcredit{display:block;position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom) + 8px);color:#6B707A;font-size:10.5px;background:rgba(31,33,38,.92);padding:3px 8px;border-radius:20px}
+ .side{width:200px}
+}
+@media (max-width:600px){
+ .side{display:none}
+ .chips{display:flex;gap:6px;overflow-x:auto;padding:6px 10px 8px;scrollbar-width:none}
+ .chips button{flex:0 0 auto;padding:7px 12px;border-radius:20px;border:1px solid var(--line);background:var(--panel);min-height:36px}
+ .chips button.sel{background:var(--selected-bg);border-color:var(--red)}
+ .chips button.add{color:var(--muted);border-style:dashed}
+ .row{padding:10px 10px;min-height:56px}
+ .row:hover{transform:none}
+}
+</style></head><body>
+<div class="app">
+ <header class="top">
+  <div class="brand"><img class="brand-icon" src="../icon/concept-a.svg" alt="">
+   <div class="brand-name"><span><span class="m">M</span> <span class="a">AppHub</span></span><span class="latest">latest</span></div></div>
+  <div class="tools">
+   <button class="syncdot" title="Đã tải danh sách từ GitHub · 5 phút trước"><i></i></button>
+   <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Tìm app… (Ctrl+F)"></label>
+   <button class="ibtn" title="Tải lại danh sách từ GitHub (F5)"><svg viewBox="0 0 24 24"><path d="M12 13v8l-4-4"/><path d="m12 21 4-4"/><path d="M4.393 15.269A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.436 8.284"/></svg></button>
+   <button class="ibtn" title="Cài đặt"><svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+   <button class="ibtn upd" title="Kiểm tra cập nhật · Đã là bản mới nhất"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
+  </div>
+ </header>
+ <div class="mstrip">
+   <button class="syncdot" title="Đã tải từ GitHub"><i></i></button>
+   <button class="ibtn" title="Tìm"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+   <button class="ibtn" title="Tải lại danh sách"><svg viewBox="0 0 24 24"><path d="M12 13v8l-4-4"/><path d="m12 21 4-4"/><path d="M4.393 15.269A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.436 8.284"/></svg></button>
+   <button class="ibtn" title="Cài đặt"><svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+   <span class="lt">latest</span><button class="ibtn upd" title="Kiểm tra cập nhật"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
+ </div>
+ <div class="chips" id="chips"></div>
+ <div class="body">
+  <nav class="side" id="side"><h4>Nhóm</h4></nav>
+  <main class="main" id="main"></main>
+ </div>
+ <footer class="foot"><span id="stat"></span><span>Nhấn vào app để mở trang GitHub · kéo để sắp xếp · chuột phải để đổi nhóm</span><span class="credit">Created by Mondiro</span></footer>
+ <div class="mcredit">Created by Mondiro</div>
+</div>
+<script>
+const GROUPS=[['Tất cả',null],['App lớn','big'],['App nhỏ','small'],['Tool làm game','game'],['Chưa phân nhóm','none']];
+const APPS=[
+ ['Mon Trivox','Tạo & luyện câu hỏi trắc nghiệm','v1.3.2','2 ngày trước','big',1],
+ ['Motion Craft','Dựng animation 2D theo timeline','v2.0.1','hôm qua','big',1],
+ ['Mon Money Lover','Ghi chép thu chi hằng ngày','v1.8.0','4 ngày trước','big'],
+ ['Mon Keep','Ghi chú nhanh, đồng bộ nhiều máy','v1.2.0','5 ngày trước','big'],
+ ['Spine Preview','Xem trước animation Spine 3.7.94','v3.1.0','1 tuần trước','big'],
+ ['Mondiro Toolbox','Bộ tool nhỏ gom chung một chỗ','v0.9.4','hôm qua','big'],
+ ['Mon Cam','Chụp & ghi hình nhanh','v1.0.3','hôm qua','small'],
+ ['Mon ColorNote','Ghi chú theo màu','v1.1.0','5 ngày trước','small'],
+ ['MonKey','Phím tắt & macro cho PC','v0.7.2','4 ngày trước','small'],
+ ['Timer Alarm','Hẹn giờ, báo thức đơn giản','v1.0.0','5 ngày trước','small'],
+ ['Weight Tracking','Theo dõi cân nặng theo ngày','v1.2.1','4 ngày trước','small'],
+ ['Money Tracking','Theo dõi chi tiêu nhanh','v0.8.0','5 ngày trước','small'],
+ ['M View','Xem ảnh & tài liệu gọn nhẹ','v1.4.0','2 ngày trước','small'],
+ ['Payline Generator','Sinh payline cho game slot','v1.0.2','3 tuần trước','game'],
+ ['Mon FXForge','Dựng hiệu ứng FX cho Spine','v0.6.0','3 tuần trước','game'],
+ ['Mondiro MagicForge','Tạo asset & FX phép thuật','v0.5.1','3 tuần trước','game'],
+ ['FormaLab','Thử nghiệm hình khối & form','v0.3.0','10 ngày trước','game'],
+ ['Spine Preview for Art','Bản xem Spine cho team art','v1.0.0','1 tháng trước','game',0,1],
+ ['Mon ML','Thử nghiệm máy học nhỏ','v0.2.0','hôm qua','none'],
+ ['M Trivox','Bản dev của Mon Trivox','v1.3.2','hôm qua','none',0,1],
+ ['Mon Trivox Release','Kênh phát hành Mon Trivox','v1.3.2','2 ngày trước','none'],
+ ['Motion Craft Release','Kênh phát hành Motion Craft','v2.0.1','hôm qua','none'],
+];
+const COLORS=['#3D6BFF','#7B5CFF','#22A6C3','#1FA463','#D9822B','#B8456E','#5B8DEF','#7E57C2'];
+const col=s=>COLORS[[...s].reduce((a,c)=>a+c.charCodeAt(0),0)%COLORS.length];
+const lock='<svg viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+function row(a){return `<div class="row" title="${a[0]} · mở trên GitHub"><div class="chip" style="background:${col(a[0])}">${a[0][0]}</div>
+ <div><div class="nm">${a[0]}${a[6]?lock:''}</div><div class="ds">${a[1]}</div></div>
+ <div class="meta"><span class="ver ${a[5]?'new':''}">${a[2]}</span><span class="when">${a[3]}</span></div></div>`}
+const side=document.getElementById('side'),chips=document.getElementById('chips');
+GROUPS.forEach((g,i)=>{const n=g[1]?APPS.filter(a=>a[4]===g[1]).length:APPS.length;
+ side.insertAdjacentHTML('beforeend',`<button class="grp ${i==0?'sel':''}">${g[0]}<span class="n">${n}</span></button>`);
+ chips.insertAdjacentHTML('beforeend',`<button class="${i==0?'sel':''}">${g[0]} · ${n}</button>`)});
+side.insertAdjacentHTML('beforeend',`<button class="grp add"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Thêm nhóm</button>`);
+chips.insertAdjacentHTML('beforeend',`<button class="add">+ Nhóm</button>`);
+const main=document.getElementById('main');
+GROUPS.slice(1).forEach(g=>{const list=APPS.filter(a=>a[4]===g[1]);main.insertAdjacentHTML('beforeend',`<div class="sec">${g[0]} · ${list.length}</div>`+list.map(row).join(''))});
+document.getElementById('stat').textContent=`${APPS.length} app · ${GROUPS.length-1} nhóm · đã tải 5 phút trước`;
+if(location.hash==='#electron')document.documentElement.classList.add('electron');
+</script></body></html>

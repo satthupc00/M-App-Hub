@@ -1,0 +1,61 @@
+<!doctype html><html><head><meta charset="utf-8"><title>M AppHub icon concepts</title>
+<style>
+body{margin:0;background:#17181C;color:#E8E9EC;font:14px/1.4 "Segoe UI",system-ui,sans-serif;padding:28px;width:1400px;box-sizing:border-box}
+h1{font-size:20px;margin:0 0 4px}h1 b{color:#E5383B}.sub{color:#8D929C;margin-bottom:22px}
+.row{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.card{background:#1F2126;border:1px solid #363A42;border-radius:12px;padding:18px}
+.card h2{font-size:15px;margin:0 0 2px}.card p{margin:0 0 14px;color:#8D929C;font-size:12.5px;min-height:34px}
+.big{display:flex;gap:14px;align-items:center;justify-content:center;margin-bottom:14px}
+.tile{width:150px;height:150px;border-radius:10px;display:grid;place-items:center}
+.tile img{width:132px;height:132px}
+.dark{background:#1F2126}.light{background:#F3F4F6}
+.sizes{display:flex;gap:8px;align-items:flex-end;justify-content:center;flex-wrap:wrap}
+.sz{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;color:#8D929C}
+.sz span{display:grid;place-items:center;padding:6px;border-radius:6px}
+.rec{position:absolute;right:14px;top:14px;background:#2eb87224;color:#2EB872;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:20px}
+.card{position:relative}
+h3{font-size:14px;margin:26px 0 10px;color:#E8E9EC}
+.taskbar{height:40px;display:flex;align-items:center;gap:4px;padding:0 8px;border-radius:6px;margin-bottom:8px}
+.taskbar.d{background:#101010}.taskbar.l{background:#EEEEEE}
+.tb{width:40px;height:40px;display:grid;place-items:center;position:relative}
+.tb.active::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:#4DA3FF}
+.taskbar.d .tb.active{background:#2a2a2a}.taskbar.l .tb.active{background:#dcdcdc}
+.start{width:40px;height:40px;display:grid;place-items:center}
+.sep{flex:1}
+.clock{font-size:11px;color:#888;padding:0 8px}
+.lbl{font-size:11px;color:#8D929C;margin:0 0 6px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+</style></head><body>
+<h1><b>M</b> AppHub · 3 concept icon</h1>
+<div class="sub">Phong cách khối 3D, màu rực, không khung nền, 1 điểm nhấn đỏ Mondiro. Kiểm tra chính ở cỡ taskbar 24/32px.</div>
+<div class="row">
+  <div class="card"><div class="rec">đề xuất</div><h2>A — Lưới app, ô đỏ nổi lên</h2><p>4 ô app xếp lưới, ô đỏ bay cao hơn = app có bản cập nhật mới. Đọc ngay là "nơi chứa app".</p>
+    <div class="big"><div class="tile dark"><img src="concept-a.svg"></div><div class="tile light"><img src="concept-a.svg"></div></div>
+    <div class="sizes" id="sa"></div></div>
+  <div class="card"><h2>B — Hub, nút đỏ ở giữa</h2><p>Một nút tròn đỏ nối với 3 ô app màu khác nhau: "trung tâm" quản lý mọi app.</p>
+    <div class="big"><div class="tile dark"><img src="concept-b.svg"></div><div class="tile light"><img src="concept-b.svg"></div></div>
+    <div class="sizes" id="sb"></div></div>
+  <div class="card"><h2>C — Kệ app</h2><p>3 khối app đứng trên một kệ, khối đỏ ở giữa cao nhất. Gợi "bộ sưu tập" app xếp gọn.</p>
+    <div class="big"><div class="tile dark"><img src="concept-c.svg"></div><div class="tile light"><img src="concept-c.svg"></div></div>
+    <div class="sizes" id="sc"></div></div>
+</div>
+<h3>Thử trên taskbar Windows 10 (cỡ thật 24px và 32px, cạnh icon app khác)</h3>
+<div class="two" id="tbs"></div>
+<script>
+const svgs={a:'concept-a.svg',b:'concept-b.svg',c:'concept-c.svg'};
+for(const k of 'abc'){const el=document.getElementById('s'+k);
+  for(const s of [64,48,32,24,16]){for(const bg of ['#1F2126','#F3F4F6']){
+    el.insertAdjacentHTML('beforeend',`<div class="sz"><span style="background:${bg}"><img src="${svgs[k]}" width="${s}" height="${s}"></span>${s}px</div>`)}}}
+// fake neighbours: chrome-like circle, explorer-like folder, spine-preview-like, money-lover-like
+const nb=`<div class="tb"><svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#DB4437"/><path d="M12 2a10 10 0 0 1 8.7 5H12z" fill="#F4B400"/><path d="M3.3 17A10 10 0 0 1 12 2v5a5 5 0 0 0-4.3 7.5z" fill="#0F9D58"/><circle cx="12" cy="12" r="4.5" fill="#4285F4" stroke="#fff" stroke-width="1.6"/></svg></div>
+<div class="tb"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M2 6h7l2 2h11v11H2z" fill="#F2B84B"/><path d="M2 9h20v10H2z" fill="#FFD56B"/></svg></div>`;
+const bars=document.getElementById('tbs');
+for(const size of [24,32]){for(const th of ['d','l']){
+  bars.insertAdjacentHTML('beforeend',`<div><div class="lbl">${size}px · nền ${th==='d'?'tối':'sáng'}</div><div class="taskbar ${th}">
+   <div class="start"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M0 0h7.5v7.5H0zM8.5 0H16v7.5H8.5zM0 8.5h7.5V16H0zM8.5 8.5H16V16H8.5z" fill="${th==='d'?'#fff':'#222'}"/></svg></div>
+   ${nb}
+   <div class="tb active"><img src="concept-a.svg" width="${size}" height="${size}"></div>
+   <div class="tb"><img src="concept-b.svg" width="${size}" height="${size}"></div>
+   <div class="tb"><img src="concept-c.svg" width="${size}" height="${size}"></div>
+   <div class="sep"></div><div class="clock">10:24</div></div></div>`)}}
+</script></body></html>
