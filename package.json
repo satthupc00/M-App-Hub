@@ -1,0 +1,33 @@
+{
+  "name": "m-apphub",
+  "productName": "M AppHub",
+  "version": "1.0.0",
+  "description": "Dashboard quản lý các app của Mondiro trên GitHub",
+  "main": "main.js",
+  "author": "Mondiro",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "sync-version": "node scripts/sync-version.js",
+    "dist": "npm run sync-version && electron-builder --win --publish never",
+    "release": "npm run sync-version && electron-builder --win --publish always"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "build": {
+    "appId": "com.mondiro.mapphub",
+    "productName": "M AppHub",
+    "artifactName": "M-AppHub-Setup-${version}.${ext}",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "preload.js", "docs/**/*", "package.json"],
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "build/icon.ico" },
+    "nsis": { "oneClick": true, "perMachine": false, "allowToChangeInstallationDirectory": false, "deleteAppDataOnUninstall": false, "shortcutName": "M AppHub" },
+    "publish": { "provider": "github", "owner": "satthupc00", "repo": "M-App-Hub", "releaseType": "release" }
+  }
+}
