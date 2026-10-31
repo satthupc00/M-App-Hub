@@ -3,6 +3,9 @@
 'use strict';
 const OWNER = 'satthupc00', SELF_REPO = 'M-App-Hub';
 const API = new URLSearchParams(location.search).get('api') || 'https://api.github.com'; // ?api= chỉ dùng khi test
+const RAW = new URLSearchParams(location.search).get('raw') || 'https://raw.githubusercontent.com';
+// Các chỗ hay đặt icon trong repo (ưu tiên chuẩn app Mondiro: build/icon.png)
+const ICON_PATHS = ['build/icon.png', 'docs/icons/icon-192.png', 'icon.png', 'assets/icon.png', 'app/icon.png', 'public/icon.png', 'resources/icon.png', 'icons/icon.png', 'src/assets/icon.png', 'build/icon.svg', 'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png'];
 const CACHE_TTL = 30 * 60 * 1000;           // tự tải lại nếu dữ liệu cũ hơn 30 phút
 const NEW_DAYS = 3;                          // viền xanh nếu bản mới ra trong 3 ngày
 const $ = (s, r = document) => r.querySelector(s);
@@ -24,6 +27,7 @@ const S = {
   order: store.get('order', {}),          // groupId|'none' -> [repo,...]
   overrides: store.get('overrides', {}),  // repo -> {name, desc}
   hidden: store.get('hidden', []),
+  icons: store.get('icons', {}),        // repo -> url tìm được ('' = không có)
   token: store.get('token', ''),
   cache: store.get('cache', null),        // {ts, repos:[...]}
   sel: store.get('sel', 'all'),           // nhóm đang chọn: 'all' | groupId | 'none' | 'hidden'
@@ -81,7 +85,7 @@ async function fetchAll(force) {
   const repos = (list || []).filter(r => r.owner?.login?.toLowerCase() === OWNER.toLowerCase());
   const result = await mapLimit(repos, 6, async r => {
     const prev = oldBy[r.name];
-    const base = { name: r.name, full: r.full_name, desc: r.description || '', private: !!r.private, pushed: r.pushed_at, url: r.html_url, archived: !!r.archived };
+    const base = { name: r.name, full: r.full_name, desc: r.description || '', private: !!r.private, pushed: r.pushed_at, url: r.html_url, archived: !!r.archived, branch: r.default_branch || 'main' };
     // Repo chưa có gì mới kể từ lần tải trước → dùng lại thông tin bản phát hành (tiết kiệm lượt gọi)
     if (!force && prev && prev.pushed === r.pushed_at && prev.rel !== undefined) return { ...base, rel: prev.rel };
     let rel = null;
@@ -139,7 +143,7 @@ function ago(iso) {
 const isNew = iso => iso && (Date.now() - new Date(iso)) < NEW_DAYS * 86400000;
 function groupOf(repo) { const g = S.assign[repo]; return g && S.groups.some(x => x.id === g) ? g : 'none'; }
 function visibleRepos() {
-  let list = (S.cache?.repos || []).filter(r => r.name !== SELF_REPO);
+  let list = (S.cache?.repos || []).filter(r => r.name !== SELF_REPO && !r.private);   // repo private không hiển thị
   if (S.q) { const q = S.q.toLowerCase(); list = list.filter(r => dispName(r).toLowerCase().includes(q) || (dispDesc(r) || '').toLowerCase().includes(q) || r.name.toLowerCase().includes(q)); }
   return list;
 }
@@ -156,6 +160,12 @@ function pfKey(r) {
   const pc = p.some(x => x === 'PC' || x === 'Mac' || x === 'Linux'), mb = p.includes('Android');
   return pc && mb ? 'both' : pc ? 'pc' : mb ? 'mobile' : 'none';
 }
+function logoOf(r) { return S.overrides[r.name]?.logo || S.icons[r.name] || ''; }
+function chipHTML(r, name) {
+  const logo = logoOf(r);
+  return logo ? `<div class="chip img"><img src="${esc(logo)}" alt="" loading="lazy"></div>`
+              : `<div class="chip" style="background:${colorOf(r.name)}">${esc(name[0].toUpperCase())}</div>`;
+}
 function cardHTML(r) {
   const name = dispName(r), desc = dispDesc(r), rel = r.rel, k = pfKey(r);
   const hid = S.hidden.includes(r.name);
@@ -165,7 +175,7 @@ function cardHTML(r) {
   const pf = rel ? `<span class="pf" title="${[pc ? 'PC' : '', mb ? 'Mobile' : ''].filter(Boolean).join(' + ') || 'Chưa rõ nền tảng'}"><svg class="${pc ? 'on' : ''}" style="${pc ? '' : 'opacity:.25'}"><use href="#i-monitor"/></svg><svg class="${mb ? 'on' : ''}" style="${mb ? '' : 'opacity:.25'}"><use href="#i-phone"/></svg></span>` : '';
   const when = rel?.date ? ago(rel.date) : (rel ? '' : ago(r.pushed));
   return `<div class="card ${hid ? 'hid' : ''}" data-repo="${esc(r.name)}" tabindex="0" title="${esc(name)}${desc ? ' — ' + esc(desc) : ''}">
-    <div class="chip" style="background:${colorOf(r.name)}">${esc(name[0].toUpperCase())}</div>
+    ${chipHTML(r, name)}
     <div class="l1"><div class="nm"><span>${esc(name)}</span>${r.private ? '<svg><use href="#i-lock"/></svg>' : ''}</div>${pf}</div>
     <div class="l2"><div class="ds">${esc(desc) || '<i>Chưa có mô tả</i>'}</div>${ver}<span class="when">${when}</span></div>
   </div>`;
@@ -197,10 +207,11 @@ function render() {
   }
   if (!html) html = `<div class="empty fx-rise"><h2>${S.q ? 'Không tìm thấy app nào' : 'Trống'}</h2><div>${S.q ? 'Thử từ khóa khác.' : 'Chuột phải vào một app (hoặc giữ lâu trên điện thoại) để đưa vào nhóm này.'}</div></div>`;
   main.innerHTML = html;
+  probeIcons(shown);
   $('#stat').textContent = `${shown.length} app · ${S.groups.length} nhóm` + (hiddenN ? ` · ${hiddenN} đã ẩn` : '') + (S.cache ? ` · đã tải ${ago(new Date(S.cache.ts).toISOString())}` : '');
 }
 function renderBar() {
-  const all = (S.cache?.repos || []).filter(r => r.name !== SELF_REPO);
+  const all = (S.cache?.repos || []).filter(r => r.name !== SELF_REPO && !r.private);
   const shown = all.filter(r => !S.hidden.includes(r.name));
   $$('#seg button').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
   const on = $('#seg button.on'); const ind = $('#seg .ind');
@@ -218,6 +229,32 @@ function renderBar() {
     items = [['all', 'Tất cả', ''], ...PF_SECTIONS.map(([k, l]) => [k, l, k === 'none' ? 'dim' : ''])];
     $('#chips').innerHTML = items.map(([id, nm, cls]) => `<button type="button" class="${S.pf === id ? 'sel' : ''} ${cls}" data-pf="${esc(id)}">${ic[id]}${esc(nm)}<span class="n">${cnt(id)}</span></button>`).join('');
   }
+}
+
+/* ---------- tự tìm logo trong repo ---------- */
+const probing = new Set();
+function shrinkImage(file, size) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file); const img = new Image();
+    img.onload = () => { const c = document.createElement('canvas'); c.width = c.height = size; const x = c.getContext('2d');
+      const s = Math.min(img.width, img.height), sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+      x.drawImage(img, sx, sy, s, s, 0, 0, size, size); URL.revokeObjectURL(url); res(c.toDataURL('image/png')); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); }; img.src = url;
+  });
+}
+function loadImg(url) { return new Promise(res => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = url; }); }
+async function probeIcons(list) {
+  const todo = list.filter(r => S.icons[r.name] === undefined && !S.overrides[r.name]?.logo && !probing.has(r.name));
+  await mapLimit(todo, 4, async r => {
+    probing.add(r.name);
+    let found = '';
+    for (const path of ICON_PATHS) {
+      const url = `${RAW}/${r.full}/${r.branch || 'main'}/${path}`;
+      if (await loadImg(url)) { found = url; break; }
+    }
+    S.icons[r.name] = found; save('icons'); probing.delete(r.name);
+    if (found) $$(`.card[data-repo="${CSS.escape(r.name)}"] .chip`).forEach(c => { c.className = 'chip img'; c.style.background = ''; c.innerHTML = `<img src="${esc(found)}" alt="">`; });
+  });
 }
 
 /* ---------- menu ngữ cảnh ---------- */
@@ -303,14 +340,27 @@ function addGroup(repoToMove) {
 function renameGroup(gid) { const g = S.groups.find(z => z.id === gid); prompt1('Đổi tên nhóm', 'Tên nhóm', g.name, v => { g.name = v; save('groups'); render(); }); }
 function editRepo(repo) {
   const r = S.cache.repos.find(z => z.name === repo);
-  dialog('Sửa tên / mô tả', `<div class="field"><label>Tên hiển thị</label><input id="en" value="${esc(dispName(r))}" maxlength="60"></div>
+  const logo = logoOf(r);
+  dialog('Sửa tên / mô tả / logo', `<div class="field"><label>Tên hiển thị</label><input id="en" value="${esc(dispName(r))}" maxlength="60"></div>
     <div class="field"><label>Mô tả 1 dòng</label><input id="ed" value="${esc(dispDesc(r))}" maxlength="120" placeholder="${esc(r.desc || 'Chưa có mô tả trên GitHub')}"></div>
+    <div class="field"><label>Logo</label><div class="logorow"><div class="chip ${logo ? 'img' : ''}" id="elogo" style="${logo ? '' : 'background:' + colorOf(r.name)}">${logo ? `<img src="${esc(logo)}" alt="">` : esc(dispName(r)[0].toUpperCase())}</div>
+      <button type="button" class="btn" id="epick"><svg><use href="#i-edit"/></svg>Chọn ảnh…</button><button type="button" class="btn" id="eclear" ${logo ? '' : 'disabled'}>Bỏ ảnh</button>
+      <input type="file" id="efile" accept="image/*" hidden></div>
+      <div class="note">${S.icons[r.name] ? 'Logo lấy tự động từ repo.' : 'Không tìm thấy logo trong repo, bạn có thể chọn ảnh từ máy.'}</div></div>
     <div class="note">Chỉ đổi cách hiển thị trong app này, không đổi gì trên GitHub. Repo: ${esc(r.full)}</div>`,
     { icon: 'i-edit', footer: `<button type="button" class="btn" id="er">Dùng lại từ GitHub</button><button type="button" class="btn pri" id="eok">Lưu</button>`,
       onOpen: b => {
+        let newLogo = S.overrides[repo]?.logo || null;   // null = giữ nguyên, '' = bỏ ảnh
         $('#eok', b).onclick = () => { const n = $('#en', b).value.trim(), d = $('#ed', b).value.trim();
-          S.overrides[repo] = { name: n || prettyName(repo), desc: d }; save('overrides'); closeDialog(); render(); };
-        $('#er', b).onclick = () => { delete S.overrides[repo]; save('overrides'); closeDialog(); render(); };
+          const o = { name: n || prettyName(repo), desc: d }; if (newLogo) o.logo = newLogo;
+          if (newLogo === '') { S.icons[repo] = ''; save('icons'); }
+          S.overrides[repo] = o; save('overrides'); closeDialog(); render(); };
+        $('#er', b).onclick = () => { delete S.overrides[repo]; delete S.icons[repo]; save('overrides'); save('icons'); closeDialog(); render(); };
+        $('#epick', b).onclick = () => $('#efile', b).click();
+        $('#efile', b).onchange = async e => { const f = e.target.files[0]; if (!f) return;
+          try { newLogo = await shrinkImage(f, 96); const c = $('#elogo', b); c.className = 'chip img'; c.style.background = ''; c.innerHTML = `<img src="${newLogo}" alt="">`; $('#eclear', b).disabled = false; }
+          catch { toast('Không đọc được ảnh này'); } };
+        $('#eclear', b).onclick = () => { newLogo = ''; const c = $('#elogo', b); c.className = 'chip'; c.style.background = colorOf(repo); c.textContent = dispName(r)[0].toUpperCase(); $('#eclear', b).disabled = true; };
         $$('input', b).forEach(i => i.onkeydown = e => { if (e.key === 'Enter') $('#eok', b).click(); });
       } });
 }
@@ -323,20 +373,20 @@ function openSettings() {
     <div class="vline"><button type="button" class="btn" id="sCheck"><svg><use href="#i-refresh"/></svg>Kiểm tra cập nhật</button>
       <button type="button" class="btn" id="sWhatsNew"><svg><use href="#i-sparkles"/></svg>What's new</button></div>
     <div class="sect">GitHub</div>
-    <div class="field"><label>Token GitHub (tùy chọn — chỉ cần nếu muốn hiện repo private, hoặc tải lại nhiều lần trong 1 giờ)</label>
+    <div class="field"><label>Token GitHub (tùy chọn — chỉ cần nếu tải lại nhiều lần trong 1 giờ bị GitHub giới hạn)</label>
       <div class="row2"><input id="sTok" type="password" value="${esc(S.token)}" placeholder="ghp_… hoặc github_pat_…" autocomplete="off"><button type="button" class="btn" id="sTokEye" title="Hiện/ẩn"><svg><use href="#i-eye"/></svg></button></div></div>
     <div class="note">Token được lưu trên máy này, chỉ dùng để gọi GitHub. Tạo tại GitHub → Settings → Developer settings → Personal access tokens (quyền đọc repo là đủ).</div>
     <div class="sect">Dữ liệu</div>
     <div class="vline"><button type="button" class="btn" id="sForce"><svg><use href="#i-cloud"/></svg>Tải lại toàn bộ</button>
       <button type="button" class="btn dng" id="sReset"><svg><use href="#i-trash"/></svg>Xóa nhóm & tùy chỉnh</button></div>
-    <div class="note">Tải lại toàn bộ: bỏ qua dữ liệu tạm, hỏi lại GitHub từng app (tốn nhiều lượt gọi hơn).</div>`,
+    <div class="note">Tải lại toàn bộ: bỏ qua dữ liệu tạm, hỏi lại GitHub từng app và dò lại logo (tốn nhiều lượt gọi hơn). Repo private không hiển thị trong app.</div>`,
     { icon: 'i-settings', footer: `<button type="button" class="btn pri" id="sSave">Lưu</button>`,
       onOpen: b => {
         $('#sSave', b).onclick = () => { const t = $('#sTok', b).value.trim(); const changed = t !== S.token; S.token = t; save('token'); closeDialog(); if (changed) reload(true); };
         $('#sTokEye', b).onclick = () => { const i = $('#sTok', b); i.type = i.type === 'password' ? 'text' : 'password'; };
         $('#sCheck', b).onclick = () => checkUpdate(true);
         $('#sWhatsNew', b).onclick = openWhatsNew;
-        $('#sForce', b).onclick = () => { closeDialog(); reload(true); };
+        $('#sForce', b).onclick = () => { for (const k in S.icons) if (!S.icons[k]) delete S.icons[k]; save('icons'); closeDialog(); reload(true); };
         $('#sReset', b).onclick = () => { if (!confirm('Xóa toàn bộ nhóm, tên/mô tả đã sửa và danh sách ẩn?')) return;
           S.groups = [{ id: 'g1', name: 'App lớn' }, { id: 'g2', name: 'App nhỏ' }]; S.assign = {}; S.order = {}; S.overrides = {}; S.hidden = []; S.sel = 'all';
           ['groups', 'assign', 'order', 'overrides', 'hidden', 'sel'].forEach(save); closeDialog(); render(); toast('Đã đặt lại nhóm & tùy chỉnh'); };

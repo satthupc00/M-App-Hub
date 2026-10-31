@@ -1,14 +1,11 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "date": "2026-10-31",
   "new": [
-    "Hai chế độ sắp xếp: theo Nhóm (App lớn, App nhỏ…) hoặc theo Nền tảng (PC, Mobile, cả hai)",
-    "Kéo thả một app lên chip nhóm để chuyển nhóm nhanh"
+    "Hiện logo của từng app: tự tìm trong repo (build/icon.png và các chỗ hay gặp), không có thì chọn ảnh từ máy trong hộp Sửa tên / mô tả / logo"
   ],
   "improved": [
-    "Bản PC chuyển sang lưới thẻ nhỏ gọn, bỏ panel Nhóm bên trái để xem được nhiều app hơn",
-    "Nền tảng chỉ hiện icon màn hình / điện thoại, không ghi chữ",
-    "Thanh chọn nhóm / nền tảng đặt ngay dưới header, dùng chung cho PC và điện thoại"
+    "Repo private không hiển thị nữa"
   ],
   "fixed": []
 }
