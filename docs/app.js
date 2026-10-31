@@ -309,17 +309,55 @@ function shrinkImage(file, size) {
   });
 }
 function loadImg(url) { return new Promise(res => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = url; }); }
+// Tên "lõi" để ghép repo phát hành với repo gốc: Mon-Trivox-Release ↔ M_Trivox ↔ trivox
+function coreName(n) { return n.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/release$/, '').replace(/^(mondiro|mon|m)/, ''); }
+function sourceRepoOf(r) {
+  if (!/release/i.test(r.name)) return null;
+  const core = coreName(r.name); if (!core) return null;
+  return (S.cache?.repos || []).find(x => x.name !== r.name && !/release/i.test(x.name) && coreName(x.name) === core) || null;
+}
+// Quét cây file của repo (1 lượt gọi) để tìm ảnh giống icon nhất
+function scoreIconPath(p) {
+  const l = p.toLowerCase(); if (!/\.(png|svg|jpg|jpeg|webp)$/.test(l) || /node_modules|\/dist\/|\/out\/|screenshot|preview|mockup|banner|concept|taskbar|\.github/.test(l)) return 0;
+  const base = l.split('/').pop(); const depth = l.split('/').length;
+  let sc = 0;
+  if (l === 'build/icon.png') sc = 100; else if (/^icon(-?\d+)?\.(png|svg)$/.test(base)) sc = 90; else if (/ic_launcher(_foreground)?\.png$/.test(base)) sc = 70 + (/xxxhdpi/.test(l) ? 5 : 0);
+  else if (/(app-?icon|logo)/.test(base)) sc = 80; else if (/icon/.test(base)) sc = 60; else if (/icon|logo/.test(l)) sc = 40; else return 0;
+  if (/maskable|monochrome|favicon|16|24|32\b/.test(base)) sc -= 15;
+  return sc - depth;
+}
+async function treeIcon(full, branch) {
+  const t = await gh(`/repos/${full}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
+  if (!t?.tree) return null;
+  let best = null, bs = 0;
+  for (const e of t.tree) { if (e.type !== 'blob') continue; const sc = scoreIconPath(e.path); if (sc > bs) { bs = sc; best = e.path; } }
+  return best;
+}
+async function fetchIconUrl(full, branch, path, isPrivate) {
+  if (!isPrivate) { const url = `${RAW}/${full}/${branch}/${path}`; return (await loadImg(url)) ? url : ''; }
+  const c = await gh(`/repos/${full}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(branch)}`);
+  if (!c?.content) return '';
+  const ext = path.split('.').pop().toLowerCase(); const mime = { png: 'image/png', svg: 'image/svg+xml', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }[ext] || 'image/png';
+  return `data:${mime};base64,${c.content.replace(/\n/g, '')}`;
+}
+async function findIconIn(repo) {   // repo = bản ghi trong cache
+  const branches = [...new Set([repo.branch || 'main', 'main', 'master'])];
+  if (!repo.private) for (const br of branches) for (const path of ICON_PATHS) { const url = `${RAW}/${repo.full}/${br}/${path}`; if (await loadImg(url)) return url; }
+  try { const path = await treeIcon(repo.full, repo.branch || 'main'); if (path) return await fetchIconUrl(repo.full, repo.branch || 'main', path, repo.private); } catch (e) { if (/giới hạn/.test(e.message)) throw e; }
+  return '';
+}
+function repoByName(n) { n = (n || '').trim().replace(/^.*github\.com\//, '').replace(/^satthupc00\//i, '').replace(/\/.*$/, ''); return n ? (S.cache?.repos || []).find(x => x.name.toLowerCase() === n.toLowerCase()) || { name: n, full: `${OWNER}/${n}`, branch: 'main', private: false, pushed: '' } : null; }
 async function probeIcons(list) {
-  // Dò lại khi: chưa dò, hoặc trước đó không thấy mà repo đã có thay đổi mới
   const todo = list.filter(r => !S.overrides[r.name]?.logo && !probing.has(r.name) && (S.icons[r.name] === undefined || (S.icons[r.name] === '' && S.iconTried[r.name] !== r.pushed)));
-  await mapLimit(todo, 4, async r => {
+  await mapLimit(todo, 3, async r => {
     probing.add(r.name);
     let found = '';
-    const branches = [...new Set([r.branch || 'main', 'main', 'master'])];   // nhánh mặc định trước, rồi main/master
-    outer: for (const br of branches) for (const path of ICON_PATHS) {
-      const url = `${RAW}/${r.full}/${br}/${path}`;
-      if (await loadImg(url)) { found = url; break outer; }
-    }
+    try {
+      const custom = S.overrides[r.name]?.logoRepo ? repoByName(S.overrides[r.name].logoRepo) : null;
+      if (custom) found = await findIconIn(custom);
+      if (!found) found = await findIconIn(r);
+      if (!found) { const src = sourceRepoOf(r); if (src) found = await findIconIn(src); }
+    } catch (e) { probing.delete(r.name); return; }   // hết lượt gọi → để lần sau
     S.icons[r.name] = found; S.iconTried[r.name] = r.pushed; save('icons'); save('iconTried'); probing.delete(r.name);
     if (found) $$(`.card[data-repo="${CSS.escape(r.name)}"] .chip`).forEach(c => { c.className = 'chip img'; c.style.background = ''; c.innerHTML = `<img src="${esc(found)}" alt="">`; });
   });
@@ -414,14 +452,16 @@ function editRepo(repo) {
     <div class="field"><label>Logo</label><div class="logorow"><div class="chip ${logo ? 'img' : ''}" id="elogo" style="${logo ? '' : 'background:' + colorOf(r.name)}">${logo ? `<img src="${esc(logo)}" alt="">` : esc(dispName(r)[0].toUpperCase())}</div>
       <button type="button" class="btn" id="epick"><svg><use href="#i-edit"/></svg>Chọn ảnh…</button><button type="button" class="btn" id="eclear" ${logo ? '' : 'disabled'}>Bỏ ảnh</button>
       <input type="file" id="efile" accept="image/*" hidden></div>
-      <div class="note">${S.icons[r.name] ? 'Logo lấy tự động từ repo.' : 'Không tìm thấy logo trong repo, bạn có thể chọn ảnh từ máy.'}</div></div>
+      <div class="note">${S.icons[r.name] ? 'Logo lấy tự động từ repo.' : 'Không tìm thấy logo trong repo, bạn có thể chọn ảnh từ máy hoặc chỉ repo khác bên dưới.'}</div></div>
+    <div class="field"><label>Lấy logo từ repo khác (tên repo, vd: M_Trivox)</label><input id="elr" value="${esc(S.overrides[r.name]?.logoRepo || '')}" placeholder="để trống = tự tìm trong repo này và repo gốc" maxlength="100"></div>
     <div class="note">Chỉ đổi cách hiển thị trong app này, không đổi gì trên GitHub. Repo: ${esc(r.full)}</div>`,
     { icon: 'i-edit', footer: `<button type="button" class="btn" id="er">Dùng lại từ GitHub</button><button type="button" class="btn pri" id="eok">Lưu</button>`,
       onOpen: b => {
         let newLogo = S.overrides[repo]?.logo || null;   // null = giữ nguyên, '' = bỏ ảnh
         $('#eok', b).onclick = () => { const n = $('#en', b).value.trim(), d = $('#ed', b).value.trim();
           const o = { name: n || prettyName(repo), desc: d }; if (newLogo) o.logo = newLogo;
-          if (newLogo === '') { S.icons[repo] = ''; save('icons'); }
+          const lr = $('#elr', b).value.trim(); if (lr) o.logoRepo = lr;
+          if (newLogo === '' || lr !== (S.overrides[repo]?.logoRepo || '')) { delete S.icons[repo]; delete S.iconTried[repo]; save('icons'); save('iconTried'); }
           S.overrides[repo] = o; save('overrides'); closeDialog(); render(); };
         $('#er', b).onclick = () => { delete S.overrides[repo]; delete S.icons[repo]; save('overrides'); save('icons'); closeDialog(); render(); };
         $('#epick', b).onclick = () => $('#efile', b).click();
@@ -442,7 +482,7 @@ function openSettings() {
       <button type="button" class="btn" id="sWhatsNew"><svg><use href="#i-sparkles"/></svg>What's new</button></div>
     <div class="sect">Đồng bộ PC ↔ điện thoại</div>
     <div class="vline"><span id="sSyncState" class="note"></span></div>
-    <div class="field"><label>Token GitHub (classic, có quyền <b>gist</b>) — dán 1 lần trên mỗi máy</label>
+    <div class="field"><label>Token GitHub (classic, quyền <b>gist</b>; thêm <b>repo</b> nếu muốn lấy logo từ repo private) — dán 1 lần trên mỗi máy</label>
       <div class="row2"><input id="sTok" type="password" value="${esc(S.token)}" placeholder="ghp_…" autocomplete="off"><button type="button" class="btn" id="sTokEye" title="Hiện/ẩn"><svg><use href="#i-eye"/></svg></button></div></div>
     <div class="vline"><button type="button" class="btn" id="sSync" ${S.token ? '' : 'disabled'}><svg><use href="#i-refresh"/></svg>Đồng bộ ngay</button>
       <button type="button" class="btn" id="sGuide"><svg><use href="#i-sparkles"/></svg>Hướng dẫn tạo token</button></div>
@@ -479,7 +519,7 @@ function openTokenGuide() {
     <li>Chọn <b>Personal access tokens</b> → <b>Tokens (classic)</b>.</li>
     <li>Bấm <b>Generate new token</b> → <b>Generate new token (classic)</b>.</li>
     <li>Ô <b>Note</b> ghi "M AppHub". <b>Expiration</b> chọn <b>No expiration</b>.</li>
-    <li>Trong danh sách quyền, chỉ tick ô <b>gist</b>. Không cần tick gì khác.</li>
+    <li>Trong danh sách quyền, tick ô <b>gist</b> (để đồng bộ). Muốn app lấy được logo nằm trong repo <b>private</b> thì tick thêm ô <b>repo</b>.</li>
     <li>Bấm <b>Generate token</b> ở cuối trang, copy chuỗi bắt đầu bằng <b>ghp_</b>.</li>
     <li>Dán vào ô Token trong Cài đặt của app rồi bấm <b>Lưu</b>. Làm y hệt trên máy còn lại (dùng cùng token).</li>
   </ol><div class="note">Token giống như mật khẩu, không gửi cho ai. Nếu mất máy, vào lại trang Tokens (classic) bấm Delete là xong.</div></div>`, { icon: 'i-sparkles' });

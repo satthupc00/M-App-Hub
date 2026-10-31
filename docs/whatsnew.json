@@ -1,11 +1,11 @@
 {
-  "version": "1.3.1",
+  "version": "1.4.0",
   "date": "2026-10-31",
-  "new": [],
-  "improved": [
-    "Dò logo ở cả nhánh main lẫn master, và dò lại khi repo có thay đổi mới"
+  "new": [
+    "Repo phát hành (có chữ Release) tự lấy logo từ repo gốc cùng tên (vd Mon Trivox Release ← M Trivox). Repo gốc private thì token cần thêm quyền repo",
+    "Tìm icon ở bất kỳ thư mục nào trong repo, không chỉ build/icon.png",
+    "Hộp Sửa tên / mô tả / logo có thêm ô \"Lấy logo từ repo khác\" khi muốn chỉ tay"
   ],
-  "fixed": [
-    "Logo trong thư mục build của các repo dùng nhánh master (Mon Cam, M View…) không hiện"
-  ]
+  "improved": [],
+  "fixed": []
 }
