@@ -28,6 +28,9 @@ const S = {
   overrides: store.get('overrides', {}),  // repo -> {name, desc}
   hidden: store.get('hidden', []),
   icons: store.get('icons', {}),        // repo -> url tìm được ('' = không có)
+  gistId: store.get('gistId', ''),      // gist chứa cài đặt đồng bộ
+  localTs: store.get('localTs', 0),     // lần sửa cài đặt gần nhất trên máy này
+  lastSync: store.get('lastSync', 0),
   token: store.get('token', ''),
   cache: store.get('cache', null),        // {ts, repos:[...]}
   sel: store.get('sel', 'all'),           // nhóm đang chọn: 'all' | groupId | 'none' | 'hidden'
@@ -35,7 +38,9 @@ const S = {
   pf: store.get('pf', 'all'),             // nền tảng đang chọn: 'all' | 'both' | 'pc' | 'mobile' | 'none'
   q: ''
 };
-const save = k => store.set(k, S[k]);
+const SYNC_KEYS = ['groups', 'assign', 'order', 'overrides', 'hidden'];
+let applying = false;
+const save = k => { store.set(k, S[k]); if (SYNC_KEYS.includes(k) && !applying) markChanged(); };
 
 /* ---------- GitHub ---------- */
 function headers() {
@@ -43,9 +48,9 @@ function headers() {
   if (S.token) h.Authorization = 'Bearer ' + S.token;
   return h;
 }
-async function gh(path) {
-  const r = await fetch(API + path, { headers: headers() });
-  if (r.status === 404) return null;
+async function gh(path, method = 'GET', body) {
+  const r = await fetch(API + path, { method, headers: body ? { ...headers(), 'Content-Type': 'application/json' } : headers(), body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 404 && method === 'GET') return null;
   if (!r.ok) {
     const remaining = r.headers.get('x-ratelimit-remaining'), reset = +r.headers.get('x-ratelimit-reset') * 1000;
     if ((r.status === 403 || r.status === 429) && remaining === '0') {
@@ -53,9 +58,10 @@ async function gh(path) {
       throw new Error(`GitHub giới hạn lượt tải. Thử lại sau ${min} phút` + (S.token ? '' : ' (dán token trong Cài đặt để tăng giới hạn)'));
     }
     if (r.status === 401) throw new Error('Token GitHub không hợp lệ. Kiểm tra lại trong Cài đặt');
+    if (r.status === 404 && path.startsWith('/gists')) throw new Error('Token chưa có quyền "gist". Tạo token (classic) và tick ô gist');
     throw new Error('Lỗi GitHub ' + r.status);
   }
-  return r.json();
+  return r.status === 204 ? null : r.json();
 }
 function platformsOf(assets) {
   const set = new Set();
@@ -105,18 +111,18 @@ async function fetchAll(force) {
 
 /* ---------- trạng thái tải ---------- */
 let loading = false;
-function setDot(state, title) {
-  for (const d of [$('#dot'), $('#mdot')]) { d.className = 'syncdot ' + state; d.title = title; d.setAttribute('aria-label', 'Tải dữ liệu: ' + title); }
+function setLoad(state, title) {
+  for (const b of [$('#btnReload'), $('#mbtnReload')]) { b.className = 'ibtn ' + state; b.title = title; b.setAttribute('aria-label', title); }
 }
 async function reload(force) {
   if (loading) return;
-  loading = true; setDot('busy', 'Đang tải danh sách từ GitHub…');
+  loading = true; setLoad('busy', 'Đang tải danh sách từ GitHub…');
   try {
     await fetchAll(force);
-    setDot('ok', 'Đã tải từ GitHub · ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+    setLoad('', 'Tải lại danh sách từ GitHub (F5) · đã tải ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
     render();
   } catch (e) {
-    setDot('err', 'Lỗi: ' + e.message);
+    setLoad('err', 'Lỗi tải: ' + e.message + ' · bấm để thử lại');
     toast(e.message);
     render();
   } finally { loading = false; }
@@ -229,6 +235,65 @@ function renderBar() {
     items = [['all', 'Tất cả', ''], ...PF_SECTIONS.map(([k, l]) => [k, l, k === 'none' ? 'dim' : ''])];
     $('#chips').innerHTML = items.map(([id, nm, cls]) => `<button type="button" class="${S.pf === id ? 'sel' : ''} ${cls}" data-pf="${esc(id)}">${ic[id]}${esc(nm)}<span class="n">${cnt(id)}</span></button>`).join('');
   }
+}
+
+/* ---------- đồng bộ cài đặt qua Gist riêng tư ---------- */
+const SYNC_FILE = 'm-apphub.json', SYNC_DESC = 'M AppHub - cài đặt đồng bộ (app tự tạo, đừng xóa)';
+let syncing = false, pushTimer = 0, syncState = 'off';
+function snapshot() { return { v: 1, updatedAt: S.localTs, groups: S.groups, assign: S.assign, order: S.order, overrides: S.overrides, hidden: S.hidden }; }
+function applySnapshot(d) {
+  applying = true;
+  try {
+    S.groups = Array.isArray(d.groups) ? d.groups : S.groups; S.assign = d.assign || {}; S.order = d.order || {}; S.overrides = d.overrides || {}; S.hidden = Array.isArray(d.hidden) ? d.hidden : [];
+    SYNC_KEYS.forEach(save); S.localTs = d.updatedAt || Date.now(); save('localTs');
+    if (S.mode === 'group' && S.sel !== 'all' && S.sel !== 'none' && S.sel !== 'hidden' && !S.groups.some(g => g.id === S.sel)) { S.sel = 'all'; save('sel'); }
+  } finally { applying = false; }
+  render();
+}
+function markChanged() { S.localTs = Date.now(); save('localTs'); if (S.token) { clearTimeout(pushTimer); pushTimer = setTimeout(() => sync(false), 2500); } }
+function setSync(state, msg) {
+  syncState = state;
+  const titles = { off: 'Chỉ lưu trên máy này · dán token GitHub trong Cài đặt để đồng bộ', busy: 'Đang đồng bộ…', ok: 'Đã đồng bộ · ' + new Date(S.lastSync || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }), err: 'Lỗi đồng bộ: ' + (msg || '') };
+  const cls = { off: '', busy: 'busy', ok: 'ok', err: 'err' }[state];
+  for (const d of [$('#dot'), $('#mdot')]) { d.className = 'syncdot ' + cls; d.title = titles[state]; d.setAttribute('aria-label', 'Đồng bộ: ' + titles[state]); }
+  const st = $('#sSyncState'); if (st) st.textContent = titles[state];
+}
+async function findGist() {
+  if (S.gistId) { const g = await gh('/gists/' + S.gistId); if (g && g.files?.[SYNC_FILE]) return g; S.gistId = ''; save('gistId'); }
+  const list = await gh('/gists?per_page=100') || [];
+  const hit = list.find(x => x.files && x.files[SYNC_FILE]);
+  if (!hit) return null;
+  S.gistId = hit.id; save('gistId');
+  return gh('/gists/' + hit.id);
+}
+async function pushGist(id) {
+  const body = { description: SYNC_DESC, public: false, files: { [SYNC_FILE]: { content: JSON.stringify(snapshot()) } } };
+  if (id) await gh('/gists/' + id, 'PATCH', body);
+  else { const n = await gh('/gists', 'POST', body); S.gistId = n.id; save('gistId'); }
+}
+async function sync(manual) {
+  if (!S.token) { setSync('off'); if (manual) toast('Dán token GitHub trong Cài đặt để bật đồng bộ'); return; }
+  if (syncing) return; syncing = true; setSync('busy');
+  try {
+    const g = await findGist();
+    let remote = null;
+    if (g) { const f = g.files[SYNC_FILE]; const txt = f.truncated ? await (await fetch(f.raw_url)).text() : f.content; try { remote = JSON.parse(txt); } catch {} }
+    if (remote && (remote.updatedAt || 0) > S.localTs) applySnapshot(remote);
+    else if (!remote || (remote.updatedAt || 0) < S.localTs) { if (!S.localTs) { S.localTs = Date.now(); save('localTs'); } await pushGist(g?.id || S.gistId); }
+    S.lastSync = Date.now(); save('lastSync'); setSync('ok');
+    if (manual) toast('Đã đồng bộ', { ok: true });
+  } catch (e) { setSync('err', e.message); if (manual) toast('Lỗi đồng bộ: ' + e.message); }
+  finally { syncing = false; }
+}
+function exportSettings() {
+  const blob = new Blob([JSON.stringify({ ...snapshot(), exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'm-apphub-cai-dat.json'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('Đã xuất file cài đặt', { ok: true });
+}
+function importSettings(file) {
+  const rd = new FileReader();
+  rd.onload = () => { try { const d = JSON.parse(rd.result); if (!d || d.v !== 1) throw 0; d.updatedAt = Date.now(); applySnapshot(d); markChanged(); toast('Đã nhập cài đặt', { ok: true }); } catch { toast('File không đúng định dạng M AppHub'); } };
+  rd.readAsText(file);
 }
 
 /* ---------- tự tìm logo trong repo ---------- */
@@ -372,17 +437,28 @@ function openSettings() {
     <div class="vline"><span class="v">v${esc(APP_VERSION)}</span><span id="sUpdState" class="note"></span></div>
     <div class="vline"><button type="button" class="btn" id="sCheck"><svg><use href="#i-refresh"/></svg>Kiểm tra cập nhật</button>
       <button type="button" class="btn" id="sWhatsNew"><svg><use href="#i-sparkles"/></svg>What's new</button></div>
-    <div class="sect">GitHub</div>
-    <div class="field"><label>Token GitHub (tùy chọn — chỉ cần nếu tải lại nhiều lần trong 1 giờ bị GitHub giới hạn)</label>
-      <div class="row2"><input id="sTok" type="password" value="${esc(S.token)}" placeholder="ghp_… hoặc github_pat_…" autocomplete="off"><button type="button" class="btn" id="sTokEye" title="Hiện/ẩn"><svg><use href="#i-eye"/></svg></button></div></div>
-    <div class="note">Token được lưu trên máy này, chỉ dùng để gọi GitHub. Tạo tại GitHub → Settings → Developer settings → Personal access tokens (quyền đọc repo là đủ).</div>
+    <div class="sect">Đồng bộ PC ↔ điện thoại</div>
+    <div class="vline"><span id="sSyncState" class="note"></span></div>
+    <div class="field"><label>Token GitHub (classic, có quyền <b>gist</b>) — dán 1 lần trên mỗi máy</label>
+      <div class="row2"><input id="sTok" type="password" value="${esc(S.token)}" placeholder="ghp_…" autocomplete="off"><button type="button" class="btn" id="sTokEye" title="Hiện/ẩn"><svg><use href="#i-eye"/></svg></button></div></div>
+    <div class="vline"><button type="button" class="btn" id="sSync" ${S.token ? '' : 'disabled'}><svg><use href="#i-refresh"/></svg>Đồng bộ ngay</button>
+      <button type="button" class="btn" id="sGuide"><svg><use href="#i-sparkles"/></svg>Hướng dẫn tạo token</button></div>
+    <div class="note">Cài đặt (nhóm, tên/mô tả, logo, app ẩn) được lưu vào một Gist riêng tư trên GitHub của bạn; máy nào có token cũng tự kéo về. Token chỉ nằm trên máy này. Có token thì cũng hết bị giới hạn 60 lượt tải/giờ.</div>
+    <div class="vline"><button type="button" class="btn" id="sExport"><svg><use href="#i-download"/></svg>Xuất cài đặt</button>
+      <button type="button" class="btn" id="sImport"><svg><use href="#i-cloud"/></svg>Nhập cài đặt…</button><input type="file" id="sImportFile" accept="application/json,.json" hidden></div>
     <div class="sect">Dữ liệu</div>
     <div class="vline"><button type="button" class="btn" id="sForce"><svg><use href="#i-cloud"/></svg>Tải lại toàn bộ</button>
       <button type="button" class="btn dng" id="sReset"><svg><use href="#i-trash"/></svg>Xóa nhóm & tùy chỉnh</button></div>
     <div class="note">Tải lại toàn bộ: bỏ qua dữ liệu tạm, hỏi lại GitHub từng app và dò lại logo (tốn nhiều lượt gọi hơn). Repo private không hiển thị trong app.</div>`,
     { icon: 'i-settings', footer: `<button type="button" class="btn pri" id="sSave">Lưu</button>`,
       onOpen: b => {
-        $('#sSave', b).onclick = () => { const t = $('#sTok', b).value.trim(); const changed = t !== S.token; S.token = t; save('token'); closeDialog(); if (changed) reload(true); };
+        $('#sSave', b).onclick = () => { const t = $('#sTok', b).value.trim(); const changed = t !== S.token; S.token = t; save('token'); closeDialog(); if (changed) { S.gistId = ''; save('gistId'); reload(true); sync(true); } };
+        $('#sSync', b).onclick = () => { const t = $('#sTok', b).value.trim(); if (t !== S.token) { S.token = t; save('token'); S.gistId = ''; save('gistId'); } sync(true); };
+        $('#sGuide', b).onclick = openTokenGuide;
+        $('#sExport', b).onclick = exportSettings;
+        $('#sImport', b).onclick = () => $('#sImportFile', b).click();
+        $('#sImportFile', b).onchange = e => { const f = e.target.files[0]; if (f) { closeDialog(); importSettings(f); } };
+        setSync(syncState);
         $('#sTokEye', b).onclick = () => { const i = $('#sTok', b); i.type = i.type === 'password' ? 'text' : 'password'; };
         $('#sCheck', b).onclick = () => checkUpdate(true);
         $('#sWhatsNew', b).onclick = openWhatsNew;
@@ -392,6 +468,18 @@ function openSettings() {
           ['groups', 'assign', 'order', 'overrides', 'hidden', 'sel'].forEach(save); closeDialog(); render(); toast('Đã đặt lại nhóm & tùy chỉnh'); };
         $('#sUpdState', b).textContent = updState.text || '';
       } });
+}
+function openTokenGuide() {
+  dialog('Tạo token GitHub để đồng bộ', `<div class="wn"><ol class="steps">
+    <li>Mở <b>github.com</b>, bấm ảnh đại diện góc phải → <b>Settings</b>.</li>
+    <li>Kéo xuống cuối menu trái → <b>Developer settings</b>.</li>
+    <li>Chọn <b>Personal access tokens</b> → <b>Tokens (classic)</b>.</li>
+    <li>Bấm <b>Generate new token</b> → <b>Generate new token (classic)</b>.</li>
+    <li>Ô <b>Note</b> ghi "M AppHub". <b>Expiration</b> chọn <b>No expiration</b>.</li>
+    <li>Trong danh sách quyền, chỉ tick ô <b>gist</b>. Không cần tick gì khác.</li>
+    <li>Bấm <b>Generate token</b> ở cuối trang, copy chuỗi bắt đầu bằng <b>ghp_</b>.</li>
+    <li>Dán vào ô Token trong Cài đặt của app rồi bấm <b>Lưu</b>. Làm y hệt trên máy còn lại (dùng cùng token).</li>
+  </ol><div class="note">Token giống như mật khẩu, không gửi cho ai. Nếu mất máy, vào lại trang Tokens (classic) bấm Delete là xong.</div></div>`, { icon: 'i-sparkles' });
 }
 async function openWhatsNew() {
   let w = null; try { w = await (await fetch('whatsnew.json', { cache: 'no-store' })).json(); } catch {}
@@ -558,7 +646,7 @@ addEventListener('resize', () => { const on = $('#seg button.on'); if (on) { $('
 $('#btnReload').onclick = () => reload(false); $('#mbtnReload').onclick = () => reload(false);
 $('#btnSettings').onclick = openSettings; $('#mbtnSettings').onclick = openSettings;
 $('#btnUpd').onclick = () => checkUpdate(true); $('#mbtnUpd').onclick = () => checkUpdate(true);
-$('#dot').onclick = () => toast($('#dot').title, { ok: $('#dot').classList.contains('ok') }); $('#mdot').onclick = () => toast($('#mdot').title, { ok: $('#mdot').classList.contains('ok') });
+$('#dot').onclick = () => (S.token ? sync(true) : toast($('#dot').title)); $('#mdot').onclick = () => (S.token ? sync(true) : toast($('#mdot').title));
 const onQ = v => { S.q = v.trim(); render(); };
 $('#q').addEventListener('input', e => onQ(e.target.value));
 $('#mq').addEventListener('input', e => onQ(e.target.value));
@@ -574,8 +662,11 @@ addEventListener('keydown', e => {
 
 /* ---------- khởi động ---------- */
 render();
-if (S.cache) setDot('ok', 'Dữ liệu tạm · tải ' + ago(new Date(S.cache.ts).toISOString()));
+setSync(S.token ? (S.lastSync ? 'ok' : 'off') : 'off');
 if (!S.cache || Date.now() - S.cache.ts > CACHE_TTL) reload(false);
+if (S.token) setTimeout(() => sync(false), 800);
+setInterval(() => { if (S.token && document.visibilityState === 'visible') sync(false); }, 120000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.token && Date.now() - S.lastSync > 30000) sync(false); });
 setTimeout(() => checkUpdate(false), 2500);
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (!reduced) $$('.bar,.main').forEach((el, i) => { el.classList.add('fx-rise'); el.style.animationDelay = i * 60 + 'ms'; });
