@@ -1,11 +1,12 @@
 {
-  "version": "1.4.0",
-  "date": "2026-10-31",
+  "version": "1.4.1",
+  "date": "2026-11-05",
   "new": [
-    "Repo phát hành (có chữ Release) tự lấy logo từ repo gốc cùng tên (vd Mon Trivox Release ← M Trivox). Repo gốc private thì token cần thêm quyền repo",
-    "Tìm icon ở bất kỳ thư mục nào trong repo, không chỉ build/icon.png",
-    "Hộp Sửa tên / mô tả / logo có thêm ô \"Lấy logo từ repo khác\" khi muốn chỉ tay"
+    "Cài đặt có nút \"Mở thư mục dữ liệu\" (Windows) để lấy file startup.log khi cần báo lỗi"
   ],
-  "improved": [],
+  "improved": [
+    "Khởi động an toàn hơn trên Windows: không để cửa sổ nằm ngoài màn hình, mở lần 2 thì đưa cửa sổ cũ lên, lỗi khởi động hiện hộp báo rõ ràng thay vì im lặng",
+    "Bộ cập nhật được nạp muộn, có lỗi cũng không làm app không mở được"
+  ],
   "fixed": []
 }

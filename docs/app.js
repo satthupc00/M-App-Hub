@@ -492,7 +492,8 @@ function openSettings() {
     <div class="sect">Dữ liệu</div>
     <div class="vline"><button type="button" class="btn" id="sForce"><svg><use href="#i-cloud"/></svg>Tải lại toàn bộ</button>
       <button type="button" class="btn dng" id="sReset"><svg><use href="#i-trash"/></svg>Xóa nhóm & tùy chỉnh</button></div>
-    <div class="note">Tải lại toàn bộ: bỏ qua dữ liệu tạm, hỏi lại GitHub từng app và dò lại logo (tốn nhiều lượt gọi hơn). Repo private không hiển thị trong app.</div>`,
+    <div class="note">Tải lại toàn bộ: bỏ qua dữ liệu tạm, hỏi lại GitHub từng app và dò lại logo (tốn nhiều lượt gọi hơn). Repo private không hiển thị trong app.</div>
+    ${isElectron ? `<div class="vline"><button type="button" class="btn" id="sData"><svg><use href="#i-folder"/></svg>Mở thư mục dữ liệu</button><span class="note">chứa startup.log khi cần báo lỗi</span></div>` : ''}`,
     { icon: 'i-settings', footer: `<button type="button" class="btn pri" id="sSave">Lưu</button>`,
       onOpen: b => {
         $('#sSave', b).onclick = () => { const t = $('#sTok', b).value.trim(); const changed = t !== S.token; S.token = t; save('token'); closeDialog(); if (changed) { S.gistId = ''; save('gistId'); reload(true); sync(true); } };
@@ -510,6 +511,7 @@ function openSettings() {
           S.groups = [{ id: 'g1', name: 'App lớn' }, { id: 'g2', name: 'App nhỏ' }]; S.assign = {}; S.order = {}; S.overrides = {}; S.hidden = []; S.sel = 'all';
           ['groups', 'assign', 'order', 'overrides', 'hidden', 'sel'].forEach(save); closeDialog(); render(); toast('Đã đặt lại nhóm & tùy chỉnh'); };
         $('#sUpdState', b).textContent = updState.text || '';
+        const sd = $('#sData', b); if (sd) sd.onclick = () => window.mah.openDataFolder?.();
       } });
 }
 function openTokenGuide() {
@@ -702,6 +704,10 @@ addEventListener('keydown', e => {
   if (e.key === 'F5') { e.preventDefault(); reload(false); }
   if (e.key === 'Escape' && document.activeElement === $('#q')) { $('#q').value = ''; onQ(''); $('#q').blur(); }
 });
+
+/* ---------- báo lỗi bất ngờ ---------- */
+addEventListener('error', e => { try { toast('Lỗi: ' + (e.message || 'không rõ')); } catch {} });
+addEventListener('unhandledrejection', e => { try { toast('Lỗi: ' + (e.reason?.message || e.reason || 'không rõ')); } catch {} });
 
 /* ---------- khởi động ---------- */
 if (store.get('iconsV', 0) < 2) { for (const k in S.icons) if (!S.icons[k]) delete S.icons[k]; save('icons'); store.set('iconsV', 2); }
