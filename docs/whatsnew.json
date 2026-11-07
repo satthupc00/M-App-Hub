@@ -1,12 +1,12 @@
 {
-  "version": "1.5.0",
+  "version": "1.5.1",
   "date": "2026-11-07",
-  "new": [
-    "Thanh chỉnh cỡ icon app (100–150%) trong Cài đặt → Hiển thị",
-    "Công tắc \"Hiện dòng mô tả\" trong Cài đặt (mặc định tắt)"
-  ],
+  "new": [],
   "improved": [
-    "Thẻ app gọn hơn: ẩn mô tả, tên app canh giữa theo chiều dọc; icon nền tảng, version và thời gian xếp gọn bên phải"
+    "Ưu tiên logo trong design/icon/icon-512.png và www/icon.png (sạch hơn icon Android có viền nền)",
+    "Khi repo có thay đổi mới, app tự lấy lại logo nên đổi logo trên GitHub là app cập nhật theo"
   ],
-  "fixed": []
+  "fixed": [
+    "Logo mới của M Calculator không hiện vì app còn nhớ ảnh cũ"
+  ]
 }

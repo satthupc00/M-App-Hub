@@ -5,7 +5,7 @@ const OWNER = 'satthupc00', SELF_REPO = 'M-App-Hub';
 const API = new URLSearchParams(location.search).get('api') || 'https://api.github.com'; // ?api= chỉ dùng khi test
 const RAW = new URLSearchParams(location.search).get('raw') || 'https://raw.githubusercontent.com';
 // Các chỗ hay đặt icon trong repo (ưu tiên chuẩn app Mondiro: build/icon.png)
-const ICON_PATHS = ['build/icon.png', 'docs/icons/icon-192.png', 'icon.png', 'assets/icon.png', 'app/icon.png', 'public/icon.png', 'resources/icon.png', 'icons/icon.png', 'src/assets/icon.png', 'build/icon.svg', 'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png'];
+const ICON_PATHS = ['build/icon.png', 'design/icon/icon-512.png', 'docs/icons/icon-192.png', 'www/icon.png', 'icon.png', 'assets/icon.png', 'app/icon.png', 'public/icon.png', 'resources/icon.png', 'icons/icon.png', 'src/assets/icon.png', 'build/icon.svg', 'design/icon/icon-1024.png', 'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png'];
 const CACHE_TTL = 30 * 60 * 1000;           // tự tải lại nếu dữ liệu cũ hơn 30 phút
 const NEW_DAYS = 3;                          // viền xanh nếu bản mới ra trong 3 ngày
 const $ = (s, r = document) => r.querySelector(s);
@@ -324,9 +324,9 @@ function scoreIconPath(p) {
   const l = p.toLowerCase(); if (!/\.(png|svg|jpg|jpeg|webp)$/.test(l) || /node_modules|\/dist\/|\/out\/|screenshot|preview|mockup|banner|concept|taskbar|\.github/.test(l)) return 0;
   const base = l.split('/').pop(); const depth = l.split('/').length;
   let sc = 0;
-  if (l === 'build/icon.png') sc = 100; else if (/^icon(-?\d+)?\.(png|svg)$/.test(base)) sc = 90; else if (/ic_launcher(_foreground)?\.png$/.test(base)) sc = 70 + (/xxxhdpi/.test(l) ? 5 : 0);
+  if (l === 'build/icon.png') sc = 100; else if (l === 'design/icon/icon-512.png' || l === 'design/icon/icon-1024.png') sc = 95; else if (/^icon(-?\d+)?\.(png|svg)$/.test(base)) sc = 90; else if (/ic_launcher(_foreground)?\.png$/.test(base)) sc = 70 + (/xxxhdpi/.test(l) ? 5 : 0);
   else if (/(app-?icon|logo)/.test(base)) sc = 80; else if (/icon/.test(base)) sc = 60; else if (/icon|logo/.test(l)) sc = 40; else return 0;
-  if (/maskable|monochrome|favicon|16|24|32\b/.test(base)) sc -= 15;
+  if (/maskable|monochrome|favicon|source|16|24|32\b/.test(base)) sc -= 15;
   return sc - depth;
 }
 async function treeIcon(full, branch) {
@@ -351,7 +351,7 @@ async function findIconIn(repo) {   // repo = bản ghi trong cache
 }
 function repoByName(n) { n = (n || '').trim().replace(/^.*github\.com\//, '').replace(/^satthupc00\//i, '').replace(/\/.*$/, ''); return n ? (S.cache?.repos || []).find(x => x.name.toLowerCase() === n.toLowerCase()) || { name: n, full: `${OWNER}/${n}`, branch: 'main', private: false, pushed: '' } : null; }
 async function probeIcons(list) {
-  const todo = list.filter(r => !S.overrides[r.name]?.logo && !probing.has(r.name) && (S.icons[r.name] === undefined || (S.icons[r.name] === '' && S.iconTried[r.name] !== r.pushed)));
+  const todo = list.filter(r => !S.overrides[r.name]?.logo && !probing.has(r.name) && (S.icons[r.name] === undefined || S.iconTried[r.name] !== r.pushed));
   await mapLimit(todo, 3, async r => {
     probing.add(r.name);
     let found = '';
@@ -361,6 +361,7 @@ async function probeIcons(list) {
       if (!found) found = await findIconIn(r);
       if (!found) { const src = sourceRepoOf(r); if (src) found = await findIconIn(src); }
     } catch (e) { probing.delete(r.name); return; }   // hết lượt gọi → để lần sau
+    if (found && !found.startsWith('data:') && r.pushed) found += (found.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(r.pushed);
     S.icons[r.name] = found; S.iconTried[r.name] = r.pushed; save('icons'); save('iconTried'); probing.delete(r.name);
     if (found) $$(`.card[data-repo="${CSS.escape(r.name)}"] .chip`).forEach(c => { c.className = 'chip img'; c.style.background = ''; c.innerHTML = `<img src="${esc(found)}" alt="">`; });
   });
@@ -721,7 +722,8 @@ addEventListener('unhandledrejection', e => { try { toast('Lỗi: ' + (e.reason?
 (function tick() { document.querySelectorAll('input[type=range]').forEach(r => { const p = ((r.value - (r.min || 0)) / ((r.max || 100) - (r.min || 0))) * 100; r.style.setProperty('--fill', p + '%'); }); requestAnimationFrame(tick); })();
 
 /* ---------- khởi động ---------- */
-if (store.get('iconsV', 0) < 2) { for (const k in S.icons) if (!S.icons[k]) delete S.icons[k]; save('icons'); store.set('iconsV', 2); }
+if (store.get('iconsV', 0) < 3) { S.iconTried = {}; save('iconTried'); }
+if (store.get('iconsV', 0) < 3) { for (const k in S.icons) if (!S.icons[k]) delete S.icons[k]; save('icons'); store.set('iconsV', 3); }
 render();
 setSync(S.token ? (S.lastSync ? 'ok' : 'off') : 'off');
 if (!S.cache || Date.now() - S.cache.ts > CACHE_TTL) reload(false);
