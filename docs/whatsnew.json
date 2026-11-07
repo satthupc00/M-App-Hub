@@ -1,12 +1,12 @@
 {
-  "version": "1.4.1",
-  "date": "2026-11-05",
+  "version": "1.5.0",
+  "date": "2026-11-07",
   "new": [
-    "Cài đặt có nút \"Mở thư mục dữ liệu\" (Windows) để lấy file startup.log khi cần báo lỗi"
+    "Thanh chỉnh cỡ icon app (100–150%) trong Cài đặt → Hiển thị",
+    "Công tắc \"Hiện dòng mô tả\" trong Cài đặt (mặc định tắt)"
   ],
   "improved": [
-    "Khởi động an toàn hơn trên Windows: không để cửa sổ nằm ngoài màn hình, mở lần 2 thì đưa cửa sổ cũ lên, lỗi khởi động hiện hộp báo rõ ràng thay vì im lặng",
-    "Bộ cập nhật được nạp muộn, có lỗi cũng không làm app không mở được"
+    "Thẻ app gọn hơn: ẩn mô tả, tên app canh giữa theo chiều dọc; icon nền tảng, version và thời gian xếp gọn bên phải"
   ],
   "fixed": []
 }

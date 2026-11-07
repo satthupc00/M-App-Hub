@@ -30,6 +30,8 @@ const S = {
   icons: store.get('icons', {}),        // repo -> url tìm được ('' = không có)
   iconTried: store.get('iconTried', {}),// repo -> pushed_at lúc dò lần cuối (repo đổi thì dò lại)
   gistId: store.get('gistId', ''),      // gist chứa cài đặt đồng bộ
+  iconScale: store.get('iconScale', 100), // cỡ icon 100–150%
+  showDesc: store.get('showDesc', false), // hiện dòng mô tả
   localTs: store.get('localTs', 0),     // lần sửa cài đặt gần nhất trên máy này
   lastSync: store.get('lastSync', 0),
   token: store.get('token', ''),
@@ -181,14 +183,15 @@ function cardHTML(r) {
   const pc = k === 'both' || k === 'pc', mb = k === 'both' || k === 'mobile';
   const pf = rel ? `<span class="pf" title="${[pc ? 'PC' : '', mb ? 'Mobile' : ''].filter(Boolean).join(' + ') || 'Chưa rõ nền tảng'}"><svg class="${pc ? 'on' : ''}" style="${pc ? '' : 'opacity:.25'}"><use href="#i-monitor"/></svg><svg class="${mb ? 'on' : ''}" style="${mb ? '' : 'opacity:.25'}"><use href="#i-phone"/></svg></span>` : '';
   const when = rel?.date ? ago(rel.date) : (rel ? '' : ago(r.pushed));
-  return `<div class="card ${hid ? 'hid' : ''}" data-repo="${esc(r.name)}" tabindex="0" title="${esc(name)}${desc ? ' — ' + esc(desc) : ''}">
+  return `<div class="card ${hid ? 'hid' : ''} ${S.showDesc ? 'withdesc' : ''}" data-repo="${esc(r.name)}" tabindex="0" title="${esc(name)}${desc ? ' — ' + esc(desc) : ''}">
     ${chipHTML(r, name)}
-    <div class="l1"><div class="nm"><span>${esc(name)}</span>${r.private ? '<svg><use href="#i-lock"/></svg>' : ''}</div>${pf}</div>
-    <div class="l2"><div class="ds">${esc(desc) || '<i>Chưa có mô tả</i>'}</div>${ver}<span class="when">${when}</span></div>
+    <div class="mid"><div class="nm"><span>${esc(name)}</span>${r.private ? '<svg><use href="#i-lock"/></svg>' : ''}</div>${S.showDesc ? `<div class="ds">${esc(desc) || '<i>Chưa có mô tả</i>'}</div>` : ''}</div>
+    <div class="rt">${pf}<div class="vl">${ver}</div><span class="when">${when}</span></div>
   </div>`;
 }
+function applyScale() { document.documentElement.style.setProperty('--chip', Math.round(32 * S.iconScale / 100) + 'px'); }
 function render() {
-  renderBar();
+  renderBar(); applyScale();
   const main = $('#main'); const all = visibleRepos();
   const hiddenN = all.filter(r => S.hidden.includes(r.name)).length;
   if (!S.cache) {
@@ -480,6 +483,9 @@ function openSettings() {
     <div class="vline"><span class="v">v${esc(APP_VERSION)}</span><span id="sUpdState" class="note"></span></div>
     <div class="vline"><button type="button" class="btn" id="sCheck"><svg><use href="#i-refresh"/></svg>Kiểm tra cập nhật</button>
       <button type="button" class="btn" id="sWhatsNew"><svg><use href="#i-sparkles"/></svg>What's new</button></div>
+    <div class="sect">Hiển thị</div>
+    <div class="field"><label>Cỡ icon app: <b id="sScaleV">${S.iconScale}%</b></label><input type="range" id="sScale" min="100" max="150" step="5" value="${S.iconScale}"></div>
+    <label class="chk"><input type="checkbox" id="sDesc" ${S.showDesc ? 'checked' : ''}> Hiện dòng mô tả dưới tên app</label>
     <div class="sect">Đồng bộ PC ↔ điện thoại</div>
     <div class="vline"><span id="sSyncState" class="note"></span></div>
     <div class="field"><label>Token GitHub (classic, quyền <b>gist</b>; thêm <b>repo</b> nếu muốn lấy logo từ repo private) — dán 1 lần trên mỗi máy</label>
@@ -511,6 +517,8 @@ function openSettings() {
           S.groups = [{ id: 'g1', name: 'App lớn' }, { id: 'g2', name: 'App nhỏ' }]; S.assign = {}; S.order = {}; S.overrides = {}; S.hidden = []; S.sel = 'all';
           ['groups', 'assign', 'order', 'overrides', 'hidden', 'sel'].forEach(save); closeDialog(); render(); toast('Đã đặt lại nhóm & tùy chỉnh'); };
         $('#sUpdState', b).textContent = updState.text || '';
+        const sc = $('#sScale', b); sc.oninput = () => { S.iconScale = +sc.value; $('#sScaleV', b).textContent = S.iconScale + '%'; store.set('iconScale', S.iconScale); applyScale(); };
+        $('#sDesc', b).onchange = e => { S.showDesc = e.target.checked; store.set('showDesc', S.showDesc); render(); };
         const sd = $('#sData', b); if (sd) sd.onclick = () => window.mah.openDataFolder?.();
       } });
 }
@@ -708,6 +716,9 @@ addEventListener('keydown', e => {
 /* ---------- báo lỗi bất ngờ ---------- */
 addEventListener('error', e => { try { toast('Lỗi: ' + (e.message || 'không rõ')); } catch {} });
 addEventListener('unhandledrejection', e => { try { toast('Lỗi: ' + (e.reason?.message || e.reason || 'không rõ')); } catch {} });
+
+/* ---------- tô phần đã kéo của slider ---------- */
+(function tick() { document.querySelectorAll('input[type=range]').forEach(r => { const p = ((r.value - (r.min || 0)) / ((r.max || 100) - (r.min || 0))) * 100; r.style.setProperty('--fill', p + '%'); }); requestAnimationFrame(tick); })();
 
 /* ---------- khởi động ---------- */
 if (store.get('iconsV', 0) < 2) { for (const k in S.icons) if (!S.icons[k]) delete S.icons[k]; save('icons'); store.set('iconsV', 2); }

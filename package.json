@@ -1,7 +1,7 @@
 {
   "name": "m-apphub",
   "productName": "M AppHub",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Dashboard quản lý các app của Mondiro trên GitHub",
   "main": "main.js",
   "author": "Mondiro",
